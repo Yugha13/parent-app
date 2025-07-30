@@ -118,13 +118,7 @@ export default function ExamsScreen() {
         }}
       />
 
-      <View style={commonStyles.headerContainer}>
-        <ChildSelector
-          children={mockChildren}
-          selectedChild={selectedChild}
-          onSelectChild={setSelectedChild}
-        />
-      </View>
+   
 
       {renderPeriodSelector()}
 

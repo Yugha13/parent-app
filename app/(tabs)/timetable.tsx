@@ -58,8 +58,9 @@ export default function TimetableScreen() {
   const renderDaySelector = () => (
     <View style={styles.daySelectorContainer}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.daySelector}>
-        {DAYS.map((day) => {
+        {DAYS.slice(0, 6).map((day) => {
           const isSelected = selectedDay === day;
+          const shortDay = getTranslatedDay(day).substring(0, 3);
           return (
             <TouchableOpacity
               key={day}
@@ -67,9 +68,9 @@ export default function TimetableScreen() {
               onPress={() => setSelectedDay(day)}
             >
               <Text style={[styles.dayText, isSelected && styles.selectedDayText]}>
-                {getTranslatedDay(day).substring(0, 3)}
+                {shortDay}
               </Text>
-              {isSelected && <View style={styles.selectedDayIndicator} />}
+              {isSelected && <View style={styles.selectedDayDot} />}
             </TouchableOpacity>
           );
         })}
@@ -83,13 +84,13 @@ export default function TimetableScreen() {
     const translatedSubject = t(entry.subject.toLowerCase().replace(' ', '_'));
     
     return (
-      <View key={entry.id} style={[commonStyles.smallCard, styles.timetableEntry]}>
+      <View key={entry.id} style={styles.timetableEntry}>
         <View style={[styles.subjectIndicator, { backgroundColor: subjectColor }]} />
-        <View style={styles.timeContainer}>
-          <Ionicons name="time-outline" size={16} color={colors.primary} style={styles.timeIcon} />
-          <Text style={styles.time}>{entry.time}</Text>
-        </View>
-        <View style={styles.classDetails}>
+        <View style={styles.entryContent}>
+          <View style={styles.timeContainer}>
+            <Ionicons name="time-outline" size={16} color={colors.textSecondary} style={styles.timeIcon} />
+            <Text style={styles.time}>{entry.time}</Text>
+          </View>
           <Text style={styles.subject}>{translatedSubject || entry.subject}</Text>
           <View style={styles.detailsRow}>
             <View style={styles.teacherContainer}>
@@ -108,13 +109,13 @@ export default function TimetableScreen() {
 
   const getSubjectColor = (subject: string): string => {
     const colors_map: { [key: string]: string } = {
-      'Mathematics': colors.primary,
-      'Science': colors.success,
-      'English': colors.info,
-      'History': colors.warning,
-      'Physical Education': colors.error,
-      'Art': '#9C27B0',
-      'Hindi': '#FF5722',
+      'Mathematics': '#4CAF50', // Green
+      'Science': '#4CAF50', // Green
+      'English': '#2196F3', // Blue
+      'History': '#FF9800', // Orange
+      'Physical Education': '#F44336', // Red
+      'Art': '#9C27B0', // Purple
+      'Hindi': '#FF5722', // Deep Orange
     };
     return colors_map[subject] || colors.textSecondary;
   };
@@ -141,7 +142,9 @@ export default function TimetableScreen() {
             <Text style={styles.loadingText}>{t('loadingTimetable')}</Text>
           </View>
         ) : dayTimetable.length > 0 ? (
-          dayTimetable.map((entry, index) => renderTimetableEntry(entry, index))
+          <View style={styles.timetableList}>
+            {dayTimetable.map((entry, index) => renderTimetableEntry(entry, index))}
+          </View>
         ) : (
           <View style={styles.noClassesContainer}>
             <Image 
@@ -163,39 +166,28 @@ export default function TimetableScreen() {
 
 const styles = StyleSheet.create({
   daySelectorContainer: {
-    backgroundColor: colors.backgroundAlt,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.grey,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
   },
   daySelector: {
-    paddingVertical: 14,
+    paddingVertical: 10,
     paddingHorizontal: 16,
   },
   dayButton: {
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    marginRight: 12,
-    borderRadius: 24,
-    backgroundColor: colors.background,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 8,
+    borderRadius: 20,
     alignItems: 'center',
-    minWidth: 60,
+    minWidth: 50,
     justifyContent: 'center',
   },
   selectedDayButton: {
     backgroundColor: colors.primary,
   },
   dayText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.text,
     fontFamily: 'Nunito_600SemiBold',
@@ -203,8 +195,8 @@ const styles = StyleSheet.create({
   selectedDayText: {
     color: colors.backgroundAlt,
   },
-  selectedDayIndicator: {
-    width: 6,
+  selectedDayDot: {
+    width: 4,
     height: 4,
     borderRadius: 2,
     backgroundColor: colors.backgroundAlt,
@@ -223,108 +215,86 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_400Regular',
   },
   dayTitle: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '600',
     color: colors.text,
-    marginVertical: 16,
-    fontFamily: 'Poppins_700Bold',
+    marginTop: 16,
+    marginBottom: 12,
+    marginLeft: 16,
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  timetableList: {
+    paddingBottom: 16,
   },
   timetableEntry: {
     flexDirection: 'row',
-    backgroundColor: colors.card,
-    borderRadius: 20,
+    backgroundColor: colors.background,
+    borderRadius: 12,
     marginBottom: 16,
-    marginHorizontal: 8,
+    marginHorizontal: 16,
     overflow: 'hidden',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
+    borderColor: colors.grey,
+  },
+  entryContent: {
+    flex: 1,
+    padding: 16,
   },
   timeContainer: {
-    width: 100,
-    marginRight: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.backgroundAlt,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 14,
-    alignSelf: 'flex-start',
     marginBottom: 8,
   },
   timeIcon: {
     marginRight: 4,
   },
   time: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.text,
     fontFamily: 'Nunito_600SemiBold',
   },
-  classDetails: {
-    flex: 1,
-    marginTop: 4,
-  },
   subject: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 10,
-    fontFamily: 'Poppins_700Bold',
-    letterSpacing: 0.2,
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+    fontFamily: 'Poppins_600SemiBold',
   },
   detailsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 6,
   },
   teacherContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 12,
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.03)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
   },
   roomContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.backgroundAlt,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    minWidth: 100,
-    justifyContent: 'center',
   },
   detailIcon: {
     marginRight: 6,
   },
   teacher: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textSecondary,
-    fontFamily: 'Nunito_600SemiBold',
+    fontFamily: 'Nunito_400Regular',
   },
   room: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textSecondary,
-    fontFamily: 'Nunito_600SemiBold',
+    fontFamily: 'Nunito_400Regular',
   },
   subjectIndicator: {
-    width: 8,
+    width: 6,
     height: '100%',
     position: 'absolute',
     left: 0,
     top: 0,
-    borderTopLeftRadius: 20,
-    borderBottomLeftRadius: 20,
   },
   noClassesContainer: {
     alignItems: 'center',
@@ -339,7 +309,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
+    borderColor: colors.grey,
   },
   noClassesImage: {
     width: 220,

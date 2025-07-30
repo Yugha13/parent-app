@@ -120,39 +120,7 @@ export default function HomeScreen() {
           </View>
         </DashboardCard>
 
-        {/* Today's Timetable */}
-        <DashboardCard
-          title={t('todayTimetable')}
-          icon="time-outline"
-          onPress={() => router.push('/(tabs)/timetable')}
-        >
-          <View style={styles.timetablePreview}>
-            {todayTimetable.length > 0 ? (
-              todayTimetable.slice(0, 2).map((entry, index) => (
-                <View key={entry.id} style={[styles.timetableItem, index < todayTimetable.length - 1 && styles.itemBorder]}>
-                  <View style={styles.timeSlot}>
-                    <Text style={styles.time}>{entry.time}</Text>
-                  </View>
-                  <View style={styles.classInfo}>
-                    <Text style={styles.subject}>{entry.subject}</Text>
-                    <Text style={styles.teacher}>{entry.teacher}</Text>
-                    <Text style={styles.room}>{entry.room}</Text>
-                  </View>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.noClasses}>{t('noClassesToday')}</Text>
-            )}
-            {todayTimetable.length > 2 && (
-              <TouchableOpacity 
-                style={styles.viewMoreButton}
-                onPress={() => router.push('/(tabs)/timetable')}
-              >
-                <Text style={styles.viewMoreText}>{t('viewMore')}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </DashboardCard>
+      
 
         <View style={{ height: 20 }} />
       </ScrollView>
