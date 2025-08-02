@@ -9,7 +9,7 @@ export interface Child {
 
 export interface AttendanceRecord {
   date: string;
-  status: 'present' | 'absent' | 'late';
+  status: 'present' | 'absent' | 'late' | 'holiday';
 }
 
 export interface Homework {
@@ -20,6 +20,12 @@ export interface Homework {
   dueDate: string;
   status: 'pending' | 'completed' | 'overdue';
   teacher: string;
+  attachments?: {
+    id: string;
+    name: string;
+    type: string;
+    url: string;
+  }[];
 }
 
 export interface ExamResult {
@@ -48,6 +54,10 @@ export interface Fee {
   amount: number;
   dueDate: string;
   status: 'paid' | 'pending' | 'overdue';
+  category?: 'Academics' | 'Library' | 'Transport' | 'Other';
+  term?: string;
+  paidDate?: string;
+  type?: string;
 }
 
 export interface Notice {

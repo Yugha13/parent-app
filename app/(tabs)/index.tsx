@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, commonStyles } from '../../styles/commonStyles';
 import { useTranslation } from 'react-i18next';
 import ChildSelector from '../../components/ChildSelector';
-import DashboardCard from '../../components/DashboardCard';
-import AttendanceOverview from '../../components/AttendanceOverview';
-import HomeworkList from '../../components/HomeworkList';
-import ExamResults from '../../components/ExamResults';
+import AttendanceSummary from '../../components/AttendanceSummary';
+import UpcomingClass from '../../components/UpcomingClass';
+import AnnouncementItem from '../../components/AnnouncementItem';
+import QuickAccess from '../../components/QuickAccess';
 import { 
   mockChildren, 
   mockAttendance, 
@@ -17,6 +17,7 @@ import {
   mockFees 
 } from '../../data/mockData';
 import { Child } from '../../types';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -30,97 +31,107 @@ export default function HomeScreen() {
     return t('goodEvening');
   };
 
-  const getTodayTimetable = () => {
+  const getCurrentDate = () => {
+    return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  };
+
+  const getNextClass = () => {
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-    return mockTimetable[selectedChild.id]?.filter(entry => entry.day === today) || [];
-  };
-
-  const getFeesOverview = () => {
-    const fees = mockFees[selectedChild.id] || [];
-    const totalFees = fees.reduce((sum, fee) => sum + fee.amount, 0);
-    const paidFees = fees.filter(fee => fee.status === 'paid').reduce((sum, fee) => sum + fee.amount, 0);
-    const pendingFees = totalFees - paidFees;
+    const todayClasses = mockTimetable[selectedChild.id]?.filter(entry => entry.day === today) || [];
     
-    return { totalFees, paidFees, pendingFees };
+    if (todayClasses.length === 0) return null;
+    
+    // For demo purposes, just return the first class
+    const nextClass = todayClasses[0];
+    return {
+      subject: nextClass.subject,
+      teacher: nextClass.teacher,
+      room: nextClass.room,
+      time: nextClass.time,
+      duration: '45 mins'
+    };
   };
 
-  const todayTimetable = getTodayTimetable();
-  const feesOverview = getFeesOverview();
+  const getRecentAnnouncements = () => {
+    // Mock announcements data
+    return [
+      {
+        title: 'Holiday Notice',
+        content: 'School will be closed on Monday, July 22 due to national holiday.',
+        time: '2 hours ago',
+        type: 'alert' as const
+      },
+      {
+        title: 'Math Test Tomorrow',
+        content: 'Prepare for your calculus test. Chapters 5-7 will be covered.',
+        time: 'Yesterday',
+        type: 'info' as const
+      }
+    ];
+  };
 
-  console.log('Home screen rendered with selected child:', selectedChild.name);
+  const nextClass = getNextClass();
+  const announcements = getRecentAnnouncements();
 
   return (
     <View style={commonStyles.container}>
-      <View style={commonStyles.headerContainer}>
-        <Text style={styles.greeting}>{getGreeting()}</Text>
+      <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
+        {/* Header with greeting and profile */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>{getGreeting()} 👋</Text>
+            <Text style={styles.date}>{getCurrentDate()}</Text>
+          </View>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
+            <Image 
+              source={{ uri: selectedChild.profilePic }} 
+              style={styles.profileImage} 
+            />
+            <View style={styles.onlineIndicator} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Child Selector */}
         <ChildSelector
           children={mockChildren}
           selectedChild={selectedChild}
           onSelectChild={setSelectedChild}
         />
-      </View>
-
-      <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
-        {/* Attendance Overview */}
-        <DashboardCard
-          title={t('attendanceOverview')}
-          icon="calendar-outline"
-          onPress={() => router.push('/attendance')}
-        >
-          <AttendanceOverview attendance={mockAttendance[selectedChild.id] || []} />
-        </DashboardCard>
-
-        {/* Homework Updates */}
-        <DashboardCard
-          title={t('homeworkUpdates')}
-          icon="book-outline"
-          onPress={() => router.push('/homework')}
-        >
-          <HomeworkList homework={mockHomework[selectedChild.id] || []} />
-        </DashboardCard>
-
-        {/* Exam & Marks */}
-        <DashboardCard
-          title={t('examMarks')}
-          icon="trophy-outline"
-          onPress={() => router.push('/exams')}
-        >
-          <ExamResults results={mockExamResults[selectedChild.id] || []} />
-        </DashboardCard>
-
-        {/* Fees Overview */}
-        <DashboardCard
-          title={t('feesOverview')}
-          icon="card-outline"
-          onPress={() => router.push('/fees')}
-        >
-          <View style={styles.feesContainer}>
-            <View style={styles.feesRow}>
-              <View style={styles.feeItem}>
-                <Text style={styles.feeAmount}>₹{feesOverview.totalFees.toLocaleString()}</Text>
-                <Text style={styles.feeLabel}>{t('totalFees')}</Text>
-              </View>
-              <View style={styles.feeItem}>
-                <Text style={[styles.feeAmount, { color: colors.success }]}>₹{feesOverview.paidFees.toLocaleString()}</Text>
-                <Text style={styles.feeLabel}>{t('paidAmount')}</Text>
-              </View>
-              <View style={styles.feeItem}>
-                <Text style={[styles.feeAmount, { color: colors.error }]}>₹{feesOverview.pendingFees.toLocaleString()}</Text>
-                <Text style={styles.feeLabel}>{t('pendingAmount')}</Text>
-              </View>
-            </View>
-            {feesOverview.pendingFees > 0 && (
-              <TouchableOpacity 
-                style={styles.payButton}
-                onPress={() => router.push('/fees')}
-              >
-                <Text style={styles.payButtonText}>{t('payNow')}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </DashboardCard>
 
       
+
+        {/* Attendance Summary */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('attendanceSummary')}</Text>
+          <AttendanceSummary attendance={mockAttendance[selectedChild.id] || []} />
+        </View>
+
+         {/* Quick Access */}
+        <QuickAccess />
+        
+        {/* Recent Announcements */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t('recentAnnouncements')}</Text>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/announcements')}>
+              <Text style={styles.viewAllText}>{t('viewAll')}</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.announcementsContainer}>
+            {announcements.map((announcement, index) => (
+              <AnnouncementItem 
+                key={index}
+                title={announcement.title}
+                content={announcement.content}
+                time={announcement.time}
+                type={announcement.type}
+              />
+            ))}
+          </View>
+        </View>
+
+       
 
         <View style={{ height: 20 }} />
       </ScrollView>
@@ -129,117 +140,84 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    marginTop: 8,
+  },
   greeting: {
     fontSize: 24,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: 16,
     fontFamily: 'Poppins_700Bold',
   },
-  timetableItem: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-  },
-  itemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.grey,
-  },
-  timeSlot: {
-    width: 80,
-    marginRight: 12,
-  },
-  time: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.primary,
-    fontFamily: 'Nunito_600SemiBold',
-  },
-  classInfo: {
-    flex: 1,
-  },
-  subject: {
+  date: {
     fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    fontFamily: 'Poppins_600SemiBold',
-  },
-  teacher: {
-    fontSize: 12,
     color: colors.textSecondary,
-    marginTop: 2,
-    fontFamily: 'Nunito_400Regular',
-  },
-  room: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 1,
-    fontFamily: 'Nunito_400Regular',
-  },
-  noClasses: {
-    textAlign: 'center',
-    padding: 20,
-    fontStyle: 'italic',
-    color: colors.textSecondary,
-    fontFamily: 'Nunito_600SemiBold',
-  },
-  timetablePreview: {
-    backgroundColor: colors.backgroundAlt,
-    borderRadius: 12,
-    padding: 8,
     marginTop: 4,
+    fontFamily: 'Nunito_400Regular',
   },
-  viewMoreButton: {
-    backgroundColor: colors.background,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: colors.grey,
+  profileImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    position: 'relative',
   },
-  viewMoreText: {
-    color: colors.primary,
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'Nunito_600SemiBold',
+  onlineIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#4CAF50',
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    borderWidth: 2,
+    borderColor: colors.background,
   },
-  feesContainer: {
-    // Fees container styles
+  section: {
+    marginTop: 24,
   },
-  feesRow: {
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
   },
-  feeItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  feeAmount: {
-    fontSize: 16,
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: '700',
     color: colors.text,
+    marginBottom: 16,
     fontFamily: 'Poppins_700Bold',
   },
-  feeLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 4,
-    textAlign: 'center',
-    fontFamily: 'Nunito_400Regular',
-  },
-  payButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+  noClassContainer: {
+    backgroundColor: colors.backgroundAlt,
+    borderRadius: 16,
+    padding: 24,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  payButtonText: {
-    color: colors.backgroundAlt,
+  noClassText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    fontFamily: 'Nunito_600SemiBold',
+  },
+  viewAllButton: {
+    alignSelf: 'flex-end',
+    marginTop: 8,
+  },
+  viewAllText: {
     fontSize: 14,
     fontWeight: '600',
+    color: colors.primary,
     fontFamily: 'Nunito_600SemiBold',
+  },
+  announcementsContainer: {
+    backgroundColor: colors.backgroundAlt,
+    borderRadius: 16,
+    padding: 16,
   },
 });

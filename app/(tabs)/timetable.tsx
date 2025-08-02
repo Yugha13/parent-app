@@ -3,7 +3,6 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, ActivityIn
 import { colors, commonStyles } from '../../styles/commonStyles';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import ChildSelector from '../../components/ChildSelector';
 import { mockChildren, mockTimetable } from '../../data/mockData';
 import { Child, TimetableEntry } from '../../types';
 import { StatusBar } from 'expo-status-bar';

@@ -28,15 +28,21 @@ export const mockAttendance: { [childId: string]: AttendanceRecord[] } = {
     { date: '2024-01-19', status: 'absent' },
     { date: '2024-01-22', status: 'present' },
     { date: '2024-01-23', status: 'present' },
-  ],
-  '2': [
-    { date: '2024-01-15', status: 'present' },
-    { date: '2024-01-16', status: 'present' },
-    { date: '2024-01-17', status: 'present' },
-    { date: '2024-01-18', status: 'late' },
-    { date: '2024-01-19', status: 'present' },
-    { date: '2024-01-22', status: 'present' },
-    { date: '2024-01-23', status: 'absent' },
+    { date: '2024-01-24', status: 'present' },
+    { date: '2024-01-25', status: 'present' },
+    { date: '2024-01-26', status: 'present' },
+    { date: '2024-01-27', status: 'present' },
+    { date: '2024-01-28', status: 'absent' },
+    { date: '2024-01-29', status: 'present' },
+    { date: '2024-01-30', status: 'present' },
+
+    { date: '2024-02-15', status: 'present' },
+    { date: '2024-02-16', status: 'present' },
+    { date: '2024-02-17', status: 'present' },
+    { date: '2024-02-18', status: 'late' },
+    { date: '2024-02-19', status: 'present' },
+    { date: '2024-02-22', status: 'present' },
+    { date: '2024-02-23', status: 'absent' },
   ]
 };
 
@@ -46,25 +52,47 @@ export const mockHomework: { [childId: string]: Homework[] } = {
       id: '1',
       subject: 'Mathematics',
       title: 'Algebra Problems',
-      description: 'Complete exercises 1-15 from chapter 4',
+      description: 'Complete exercises 1-15 from chapter 4. Focus on solving quadratic equations and factoring polynomials. Show all your work and circle your final answers.',
       dueDate: '2024-01-25',
       status: 'pending',
-      teacher: 'Mrs. Patel'
+      teacher: 'Mrs. Patel',
+      attachments: [
+        {
+          id: 'a1',
+          name: 'Algebra_Worksheet.pdf',
+          type: 'pdf',
+          url: 'https://example.com/files/algebra_worksheet.pdf'
+        }
+      ]
     },
     {
       id: '2',
       subject: 'Science',
       title: 'Physics Lab Report',
-      description: 'Write a report on the pendulum experiment',
+      description: 'Write a report on the pendulum experiment we conducted in class. Include your observations, data tables, and conclusions.',
       dueDate: '2024-01-24',
       status: 'completed',
-      teacher: 'Mr. Kumar'
+      teacher: 'Mr. Kumar',
+      attachments: [
+        {
+          id: 'a2',
+          name: 'Lab_Report_Template.docx',
+          type: 'docx',
+          url: 'https://example.com/files/lab_report_template.docx'
+        },
+        {
+          id: 'a3',
+          name: 'Pendulum_Data.xlsx',
+          type: 'xlsx',
+          url: 'https://example.com/files/pendulum_data.xlsx'
+        }
+      ]
     },
     {
       id: '3',
       subject: 'English',
       title: 'Essay Writing',
-      description: 'Write an essay on environmental conservation',
+      description: 'Write an essay on environmental conservation. Minimum 500 words, include at least three references.',
       dueDate: '2024-01-20',
       status: 'overdue',
       teacher: 'Ms. Singh'
@@ -75,16 +103,24 @@ export const mockHomework: { [childId: string]: Homework[] } = {
       id: '4',
       subject: 'Mathematics',
       title: 'Multiplication Tables',
-      description: 'Practice tables 12-15',
+      description: 'Practice tables 12-15. Complete the worksheet and submit.',
       dueDate: '2024-01-26',
       status: 'pending',
-      teacher: 'Mrs. Gupta'
+      teacher: 'Mrs. Gupta',
+      attachments: [
+        {
+          id: 'a4',
+          name: 'Multiplication_Practice.pdf',
+          type: 'pdf',
+          url: 'https://example.com/files/multiplication_practice.pdf'
+        }
+      ]
     },
     {
       id: '5',
       subject: 'Hindi',
       title: 'Story Reading',
-      description: 'Read chapter 3 and answer questions',
+      description: 'Read chapter 3 and answer questions at the end of the chapter.',
       dueDate: '2024-01-23',
       status: 'completed',
       teacher: 'Mr. Verma'
@@ -228,15 +264,17 @@ export const mockTimetable: { [childId: string]: TimetableEntry[] } = {
 
 export const mockFees: { [childId: string]: Fee[] } = {
   '1': [
-    { id: '1', description: 'Tuition Fee - January', amount: 5000, dueDate: '2024-01-31', status: 'paid' },
-    { id: '2', description: 'Transport Fee - January', amount: 1500, dueDate: '2024-01-31', status: 'paid' },
-    { id: '3', description: 'Tuition Fee - February', amount: 5000, dueDate: '2024-02-28', status: 'pending' },
-    { id: '4', description: 'Activity Fee', amount: 800, dueDate: '2024-01-20', status: 'overdue' },
+    { id: '1', description: 'Tuition Fee - January', amount: 5000, dueDate: '2024-01-31', status: 'paid', category: 'Academics', term: 'January 2024', paidDate: '2024-01-15', type: 'Monthly Fee' },
+    { id: '2', description: 'Transport Fee - January', amount: 1500, dueDate: '2024-01-31', status: 'paid', category: 'Transport', term: 'January 2024', paidDate: '2024-01-15', type: 'Monthly Fee' },
+    { id: '3', description: 'Tuition Fee - February', amount: 5000, dueDate: '2024-02-28', status: 'pending', category: 'Academics', term: 'February 2024', type: 'Monthly Fee' },
+    { id: '4', description: 'Activity Fee', amount: 800, dueDate: '2024-01-20', status: 'overdue', category: 'Other', term: 'Annual 2024', type: 'Annual Fee' },
+    { id: '8', description: 'Library Fee - Annual', amount: 1200, dueDate: '2024-02-15', status: 'pending', category: 'Library', term: 'Annual 2024', type: 'Annual Fee' },
   ],
   '2': [
-    { id: '5', description: 'Tuition Fee - January', amount: 4000, dueDate: '2024-01-31', status: 'paid' },
-    { id: '6', description: 'Transport Fee - January', amount: 1500, dueDate: '2024-01-31', status: 'pending' },
-    { id: '7', description: 'Book Fee', amount: 1200, dueDate: '2024-02-15', status: 'pending' },
+    { id: '5', description: 'Tuition Fee - January', amount: 4000, dueDate: '2024-01-31', status: 'paid', category: 'Academics', term: 'January 2024', paidDate: '2024-01-20', type: 'Monthly Fee' },
+    { id: '6', description: 'Transport Fee - January', amount: 1500, dueDate: '2024-01-31', status: 'pending', category: 'Transport', term: 'January 2024', type: 'Monthly Fee' },
+    { id: '7', description: 'Book Fee', amount: 1200, dueDate: '2024-02-15', status: 'pending', category: 'Library', term: 'Annual 2024', type: 'Annual Fee' },
+    { id: '9', description: 'Sports Fee', amount: 800, dueDate: '2024-02-28', status: 'pending', category: 'Other', term: 'Annual 2024', type: 'Annual Fee' },
   ]
 };
 

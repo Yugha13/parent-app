@@ -1,166 +1,223 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { colors, commonStyles } from '../styles/commonStyles';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
-import ChildSelector from '../components/ChildSelector';
-import AttendanceOverview from '../components/AttendanceOverview';
-import { mockChildren, mockAttendance } from '../data/mockData';
-import { Child, AttendanceRecord } from '../types';
+import { mockAttendance, mockChildren } from '../data/mockData';
+import { AttendanceRecord } from '../types';
 
-type PeriodType = 'week' | 'month' | 'year';
+interface MonthlyAttendance {
+  month: string;
+  year: number;
+  percentage: number;
+  records: AttendanceRecord[];
+}
 
-export default function AttendanceScreen() {
+export default function AttendancePage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [selectedChild, setSelectedChild] = useState<Child>(mockChildren[0]);
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('week');
-
-  const getAttendanceForPeriod = (period: PeriodType): AttendanceRecord[] => {
-    const attendance = mockAttendance[selectedChild.id] || [];
-    const now = new Date();
+  const [selectedChild, setSelectedChild] = useState(mockChildren[0]);
+  const [selectedMonth, setSelectedMonth] = useState<MonthlyAttendance | null>(null);
+  
+  // Get attendance data for the selected child
+  const attendanceData = mockAttendance[selectedChild.id] || [];
+  
+  // Calculate overall attendance percentage
+  const calculateOverallAttendance = () => {
+    const total = attendanceData.length;
+    if (total === 0) return 0;
     
-    switch (period) {
-      case 'week':
-        // Last 7 days
-        const weekAgo = new Date(now);
-        weekAgo.setDate(now.getDate() - 7);
-        return attendance.filter(record => new Date(record.date) >= weekAgo);
-      
-      case 'month':
-        // Last 30 days
-        const monthAgo = new Date(now);
-        monthAgo.setDate(now.getDate() - 30);
-        return attendance.filter(record => new Date(record.date) >= monthAgo);
-      
-      case 'year':
-        // All records (for demo purposes)
-        return attendance;
-      
-      default:
-        return attendance;
-    }
+    const present = attendanceData.filter(record => record.status === 'present').length;
+    return Math.round((present / total) * 100);
   };
-
-  const renderPeriodSelector = () => (
-    <View style={styles.periodSelector}>
-      <TouchableOpacity
-        style={[styles.periodButton, selectedPeriod === 'week' && styles.selectedPeriodButton]}
-        onPress={() => setSelectedPeriod('week')}
-      >
-        <Text style={[styles.periodText, selectedPeriod === 'week' && styles.selectedPeriodText]}>
-          {t('thisWeek')}
-        </Text>
-      </TouchableOpacity>
+  
+  // Get monthly attendance data
+  const getMonthlyAttendance = (): MonthlyAttendance[] => {
+    const monthlyData: { [key: string]: { records: AttendanceRecord[], present: number } } = {};
+    
+    attendanceData.forEach(record => {
+      const date = new Date(record.date);
+      const monthYear = `${date.getMonth()}-${date.getFullYear()}`;
       
-      <TouchableOpacity
-        style={[styles.periodButton, selectedPeriod === 'month' && styles.selectedPeriodButton]}
-        onPress={() => setSelectedPeriod('month')}
-      >
-        <Text style={[styles.periodText, selectedPeriod === 'month' && styles.selectedPeriodText]}>
-          {t('thisMonth')}
-        </Text>
-      </TouchableOpacity>
+      if (!monthlyData[monthYear]) {
+        monthlyData[monthYear] = { records: [], present: 0 };
+      }
       
-      <TouchableOpacity
-        style={[styles.periodButton, selectedPeriod === 'year' && styles.selectedPeriodButton]}
-        onPress={() => setSelectedPeriod('year')}
-      >
-        <Text style={[styles.periodText, selectedPeriod === 'year' && styles.selectedPeriodText]}>
-          {t('This Year')}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const periodAttendance = getAttendanceForPeriod(selectedPeriod);
-
+      monthlyData[monthYear].records.push(record);
+      if (record.status === 'present') {
+        monthlyData[monthYear].present += 1;
+      }
+    });
+    
+    return Object.keys(monthlyData).map(key => {
+      const [month, year] = key.split('-').map(Number);
+      const records = monthlyData[key].records;
+      const percentage = Math.round((monthlyData[key].present / records.length) * 100);
+      
+      return {
+        month: getMonthName(month),
+        year: year,
+        percentage,
+        records
+      };
+    }).sort((a, b) => {
+      // Sort by year and month (most recent first)
+      if (b.year !== a.year) return b.year - a.year;
+      return getMonthIndex(b.month) - getMonthIndex(a.month);
+    });
+  };
+  
+  const getMonthName = (monthIndex: number): string => {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[monthIndex];
+  };
+  
+  const getMonthIndex = (monthName: string): number => {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months.indexOf(monthName);
+  };
+  
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const dayOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()];
+    return `${dayOfWeek}, ${day} ${getMonthName(date.getMonth()).substring(0, 3)}`;
+  };
+  
+  const monthlyData = getMonthlyAttendance();
+  
+  // Render the main attendance overview page
+  const renderAttendanceOverview = () => {
+    return (
+      <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
+        {/* Overall Attendance Card */}
+        <View style={styles.overallCard}>
+          <Image 
+            source={require('../assets/images/final_quest_240x240.png')} 
+            style={styles.backgroundImage} 
+            resizeMode="cover"
+          />
+          <View style={styles.overallContent}>
+            <Text style={styles.overallText}>Overall Attendance</Text>
+            <View style={styles.circularProgress}>
+              <Text style={styles.percentageText}>{calculateOverallAttendance()}%</Text>
+            </View>
+          </View>
+        </View>
+        
+        {/* Monthly Attendance Section */}
+        <Text style={styles.sectionTitle}>Monthly Attendance</Text>
+        
+        {monthlyData.map((item, index) => (
+          <TouchableOpacity 
+            key={`${item.month}-${item.year}`}
+            style={styles.monthCard}
+            onPress={() => setSelectedMonth(item)}
+          >
+            <View style={styles.monthInfo}>
+              <Text style={styles.monthName}>{item.month} {item.year}</Text>
+              <Text style={styles.percentageBadgeText}>{item.percentage}%</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+        ))}
+        
+        <View style={{ height: 20 }} />
+      </ScrollView>
+    );
+  };
+  
+  // Render the monthly detail view
+  const renderMonthlyDetail = () => {
+    if (!selectedMonth) return null;
+    
+    // Group records by status
+    const presentDays = selectedMonth.records.filter(r => r.status === 'present').length;
+    const absentDays = selectedMonth.records.filter(r => r.status === 'absent').length;
+    const holidayDays = 1; // Mocked for demonstration
+    
+    // Sort records by date
+    const sortedRecords = [...selectedMonth.records].sort((a, b) => {
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+    
+    return (
+      <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
+        {/* Summary Cards */}
+        <View style={styles.summaryContainer}>
+          <View style={[styles.summaryCard, styles.presentCard]}>
+            <Ionicons name="checkmark-circle" size={20} color={colors.present} />
+            <Text style={styles.summaryLabel}>Present:</Text>
+            <Text style={styles.summaryValue}>{presentDays} days</Text>
+          </View>
+          
+          <View style={[styles.summaryCard, styles.absentCard]}>
+            <Ionicons name="close-circle" size={20} color={colors.absent} />
+            <Text style={styles.summaryLabel}>Absent:</Text>
+            <Text style={styles.summaryValue}>{absentDays} day</Text>
+          </View>
+          
+          <View style={[styles.summaryCard, styles.holidayCard]}>
+            <Ionicons name="calendar" size={20} color={colors.textSecondary} />
+            <Text style={styles.summaryLabel}>Holidays:</Text>
+            <Text style={styles.summaryValue}>{holidayDays} day</Text>
+          </View>
+        </View>
+        
+        {/* Daily Records */}
+        <View style={styles.dailyListContainer}>
+          {sortedRecords.map((record, index) => (
+            <View key={index} style={styles.dailyItem}>
+              <Text style={styles.dateText}>{formatDate(record.date)}</Text>
+              <Text 
+                style={[
+                  styles.statusText,
+                  record.status === 'present' && styles.statusPresent,
+                  record.status === 'absent' && styles.statusAbsent,
+                  record.status === 'late' && styles.statusLate
+                ]}
+              >
+                {record.status === 'present' ? 'Present' : 
+                 record.status === 'absent' ? 'Absent' : 'Late'}
+              </Text>
+            </View>
+          ))}
+          
+       
+        </View>
+        
+        <View style={{ height: 20 }} />
+      </ScrollView>
+    );
+  };
+  
   return (
     <View style={commonStyles.container}>
       <Stack.Screen
         options={{
           headerShown: true,
-          title: t('attendanceOverview'),
+          title: selectedMonth ? `${selectedMonth.month} ${selectedMonth.year} Attendance` : t('attendance'),
           headerTitleStyle: commonStyles.title,
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <TouchableOpacity 
+              onPress={() => selectedMonth ? setSelectedMonth(null) : router.back()} 
+              style={styles.backButton}
+            >
               <Ionicons name="arrow-back" size={24} color={colors.text} />
             </TouchableOpacity>
           ),
         }}
       />
-
       
-
-      {renderPeriodSelector()}
-
-      <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.attendanceContainer}>
-          <AttendanceOverview attendance={periodAttendance} />
-        </View>
-
-        <View style={styles.detailedAttendance}>
-          <Text style={styles.sectionTitle}>{t('detailedAttendance')}</Text>
-          
-          {periodAttendance.map((record, index) => {
-            const date = new Date(record.date);
-            const formattedDate = date.toLocaleDateString('en-US', { 
-              weekday: 'short', 
-              month: 'short', 
-              day: 'numeric' 
-            });
-            
-            const getStatusColor = (status: string) => {
-              switch (status) {
-                case 'present': return colors.present;
-                case 'absent': return colors.absent;
-                case 'late': return colors.late;
-                default: return colors.textSecondary;
-              }
-            };
-            
-            const getStatusIcon = (status: string) => {
-              switch (status) {
-                case 'present': return 'checkmark-circle';
-                case 'absent': return 'close-circle';
-                case 'late': return 'time';
-                default: return 'help-circle';
-              }
-            };
-            
-            const getStatusText = (status: string) => {
-              switch (status) {
-                case 'present': return t('present');
-                case 'absent': return t('absent');
-                case 'late': return t('late');
-                default: return status;
-              }
-            };
-            
-            return (
-              <View key={index} style={styles.attendanceRecord}>
-                <View style={styles.dateContainer}>
-                  <Text style={styles.date}>{formattedDate}</Text>
-                </View>
-                <View style={[styles.statusContainer, { backgroundColor: getStatusColor(record.status) + '20' }]}>
-                  <Ionicons 
-                    name={getStatusIcon(record.status)} 
-                    size={20} 
-                    color={getStatusColor(record.status)} 
-                    style={styles.statusIcon} 
-                  />
-                  <Text style={[styles.statusText, { color: getStatusColor(record.status) }]}>
-                    {getStatusText(record.status)}
-                  </Text>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-
-        <View style={{ height: 20 }} />
-      </ScrollView>
+      {selectedMonth ? renderMonthlyDetail() : renderAttendanceOverview()}
     </View>
   );
 }
@@ -169,90 +226,159 @@ const styles = StyleSheet.create({
   backButton: {
     marginLeft: 16,
   },
-  periodSelector: {
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: 24,
+    marginBottom: 16,
+    fontFamily: 'Poppins_700Bold',
+  },
+  overallCard: {
+    height: 180,
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+    marginTop: 16,
+  },
+  backgroundImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    opacity: 0.8,
+  },
+  overallContent: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    padding: 20,
+  },
+  circularProgress: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  percentageText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.primary,
+    fontFamily: 'Poppins_700Bold',
+  },
+  overallText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: 'white',
+    fontFamily: 'Poppins_700Bold',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  monthCard: {
+    ...commonStyles.card,
     flexDirection: 'row',
-    backgroundColor: colors.backgroundAlt,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.grey,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 6,
+    paddingVertical: 16,
   },
-  periodButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
-    borderRadius: 20,
-    backgroundColor: colors.background,
+  monthInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  selectedPeriodButton: {
-    backgroundColor: colors.primary,
-  },
-  periodText: {
-    fontSize: 14,
+  monthName: {
+    fontSize: 16,
     fontWeight: '600',
     color: colors.text,
     fontFamily: 'Nunito_600SemiBold',
   },
-  selectedPeriodText: {
-    color: colors.backgroundAlt,
+  percentageBadgeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+    marginLeft: 12,
+    fontFamily: 'Nunito_600SemiBold',
   },
-  attendanceContainer: {
-    marginVertical: 16,
-    backgroundColor: colors.card,
+  summaryContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  summaryCard: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginHorizontal: 4,
+    backgroundColor: colors.backgroundAlt,
+  },
+  presentCard: {
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+  },
+  absentCard: {
+    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+  },
+  holidayCard: {
+    backgroundColor: 'rgba(158, 158, 158, 0.1)',
+  },
+  summaryLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    marginTop: 4,
+    fontFamily: 'Nunito_600SemiBold',
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: colors.textSecondary,
+    marginTop: 2,
+    fontFamily: 'Nunito_400Regular',
+  },
+  dailyListContainer: {
+    backgroundColor: colors.backgroundAlt,
     borderRadius: 16,
     padding: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
-  detailedAttendance: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 12,
-    fontFamily: 'Poppins_600SemiBold',
-  },
-  attendanceRecord: {
+  dailyItem: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
   },
-  dateContainer: {
-    flex: 1,
-  },
-  date: {
+  dateText: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.text,
     fontFamily: 'Nunito_600SemiBold',
   },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  statusIcon: {
-    marginRight: 4,
-  },
   statusText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
+    fontFamily: 'Nunito_600SemiBold',
+  },
+  statusPresent: {
+    color: colors.present,
+  },
+  statusAbsent: {
+    color: colors.absent,
+  },
+  statusLate: {
+    color: colors.late,
+  },
+  statusHoliday: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
     fontFamily: 'Nunito_600SemiBold',
   },
 });

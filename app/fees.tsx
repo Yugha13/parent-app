@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, Modal } from 'react-native';
 import { colors, commonStyles } from '../styles/commonStyles';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import ChildSelector from '../components/ChildSelector';
 import { mockChildren, mockFees } from '../data/mockData';
 import { Child, Fee } from '../types';
 
@@ -15,6 +14,8 @@ export default function FeesScreen() {
   const router = useRouter();
   const [selectedChild, setSelectedChild] = useState<Child>(mockChildren[0]);
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
+  const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
+  const [paymentType, setPaymentType] = useState<string>('full');
 
   const getFilteredFees = (filter: FilterType): Fee[] => {
     const fees = mockFees[selectedChild.id] || [];
@@ -29,6 +30,33 @@ export default function FeesScreen() {
       default:
         return fees;
     }
+  };
+  
+  const getFeesByCategory = (category: string): Fee[] => {
+    const fees = mockFees[selectedChild.id] || [];
+    return fees.filter(fee => 
+      (fee.status === 'pending' || fee.status === 'overdue') && 
+      fee.category === category
+    );
+  };
+  
+  const getCategoryAmount = (category: string): number => {
+    const fees = getFeesByCategory(category);
+    return fees.reduce((sum, fee) => sum + fee.amount, 0);
+  };
+  
+  const handlePayNow = () => {
+    setShowPaymentModal(true);
+    setPaymentType('full');
+  };
+  
+  const handleCategoryPayment = (category: string) => {
+    setShowPaymentModal(true);
+    setPaymentType(category);
+  };
+  
+  const closePaymentModal = () => {
+    setShowPaymentModal(false);
   };
 
   const renderFilterSelector = () => (
@@ -70,6 +98,69 @@ export default function FeesScreen() {
       </TouchableOpacity>
     </View>
   );
+  
+  const renderPaymentModal = () => {
+    return (
+      <Modal
+        visible={showPaymentModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={closePaymentModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {paymentType === 'full' ? t('payFullAmount') : t('payCategoryAmount', { category: paymentType })}
+              </Text>
+              <TouchableOpacity onPress={closePaymentModal}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalBody}>
+              <Text style={styles.modalAmount}>
+                {paymentType === 'full' 
+                  ? formatCurrency(totalDueAmount) 
+                  : formatCurrency(getCategoryAmount(paymentType))}
+              </Text>
+              
+              <TouchableOpacity 
+                style={styles.paymentMethodButton}
+                onPress={() => console.log('Pay with card')}
+              >
+                <Ionicons name="card-outline" size={24} color={colors.primary} />
+                <Text style={styles.paymentMethodText}>{t('payWithCard')}</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.paymentMethodButton}
+                onPress={() => console.log('Pay with UPI')}
+              >
+                <Ionicons name="phone-portrait-outline" size={24} color={colors.primary} />
+                <Text style={styles.paymentMethodText}>{t('payWithUPI')}</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.paymentMethodButton}
+                onPress={() => console.log('Pay with net banking')}
+              >
+                <Ionicons name="globe-outline" size={24} color={colors.primary} />
+                <Text style={styles.paymentMethodText}>{t('payWithNetBanking')}</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={closePaymentModal}
+            >
+              <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -97,19 +188,60 @@ export default function FeesScreen() {
       day: 'numeric' 
     });
   };
+  
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Academics':
+        return 'book-outline';
+      case 'Library':
+        return 'library-outline';
+      case 'Transport':
+        return 'bus-outline';
+      default:
+        return 'cash-outline';
+    }
+  };
+  
+  const getCategoryPaymentStatus = (category: string) => {
+    const fees = mockFees[selectedChild.id] || [];
+    const categoryFees = fees.filter(fee => fee.category === category);
+    
+    if (categoryFees.length === 0) return 'none';
+    
+    const allPaid = categoryFees.every(fee => fee.status === 'paid');
+    if (allPaid) return 'paid';
+    
+    const somePaid = categoryFees.some(fee => fee.status === 'paid');
+    if (somePaid) return 'partially_paid';
+    
+    return 'pending';
+  };
+  
+  const getCategoryStatusText = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return t('fullyPaid');
+      case 'partially_paid':
+        return t('partiallyPaid');
+      case 'pending':
+        return t('pending');
+      default:
+        return t('noFees');
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return `₹${amount.toLocaleString('en-IN')}`;
   };
 
   const filteredFees = getFilteredFees(selectedFilter);
-  
-  // Calculate total fees statistics
-  const totalAmount = filteredFees.reduce((sum, fee) => sum + fee.amount, 0);
-  const paidAmount = filteredFees
-    .filter(fee => fee.status === 'paid')
-    .reduce((sum, fee) => sum + fee.amount, 0);
-  const pendingAmount = totalAmount - paidAmount;
+  const allFees = mockFees[selectedChild.id] || [];
+  const totalAmount = allFees.reduce((sum, fee) => sum + fee.amount, 0) || 0;
+  const paidAmount = allFees.filter(fee => fee.status === 'paid').reduce((sum, fee) => sum + fee.amount, 0) || 0;
+  const totalDueAmount = totalAmount - paidAmount;
+
+  // Get unique categories
+  const categories = Array.from(new Set(allFees.map(fee => fee.category)));
 
   return (
     <View style={commonStyles.container}>
@@ -126,33 +258,25 @@ export default function FeesScreen() {
         }}
       />
 
-   
-
-      <View style={styles.summaryContainer}>
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>{t('totalFees')}</Text>
-              <Text style={styles.summaryValue}>{formatCurrency(totalAmount)}</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>{t('paidAmount')}</Text>
-              <Text style={[styles.summaryValue, { color: colors.success }]}>
-                {formatCurrency(paidAmount)}
-              </Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>{t('pendingAmount')}</Text>
-              <Text style={[styles.summaryValue, { color: pendingAmount > 0 ? colors.warning : colors.success }]}>
-                {formatCurrency(pendingAmount)}
-              </Text>
-            </View>
-          </View>
+      {/* Top Section with Total Due Amount and Pay Now button */}
+      <View style={styles.topSection}>
+        <View style={styles.dueAmountContainer}>
+          <Text style={styles.dueAmountLabel}>{t('totalDueAmount')}</Text>
+          <Text style={styles.dueAmountValue}>{formatCurrency(totalDueAmount)}</Text>
         </View>
+        
+        {totalDueAmount > 0 && (
+          <TouchableOpacity 
+            style={styles.payNowButton}
+            onPress={handlePayNow}
+          >
+            <Ionicons name="card-outline" size={18} color={colors.backgroundAlt} />
+            <Text style={styles.payNowButtonText}>{t('payNow')}</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
+    
       {renderFilterSelector()}
 
       <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
@@ -174,15 +298,17 @@ export default function FeesScreen() {
               
               <View style={styles.feeDetails}>
                 <View style={styles.feeDetailRow}>
+                  <Text style={styles.feeDetailLabel}>{t('category')}:</Text>
+                  <Text style={styles.feeDetailValue}>{fee.category}</Text>
+                </View>
+                <View style={styles.feeDetailRow}>
                   <Text style={styles.feeDetailLabel}>{t('term')}:</Text>
                   <Text style={styles.feeDetailValue}>{fee.term}</Text>
                 </View>
-                
                 <View style={styles.feeDetailRow}>
                   <Text style={styles.feeDetailLabel}>{t('amount')}:</Text>
                   <Text style={styles.feeDetailValue}>{formatCurrency(fee.amount)}</Text>
                 </View>
-                
                 {fee.status === 'paid' && (
                   <View style={styles.feeDetailRow}>
                     <Text style={styles.feeDetailLabel}>{t('paidOn')}:</Text>
@@ -223,6 +349,8 @@ export default function FeesScreen() {
 
         <View style={{ height: 20 }} />
       </ScrollView>
+      
+      {renderPaymentModal()}
     </View>
   );
 }
@@ -230,6 +358,135 @@ export default function FeesScreen() {
 const styles = StyleSheet.create({
   backButton: {
     marginLeft: 16,
+  },
+  topSection: {
+    backgroundColor: colors.primary,
+    borderRadius: 16,
+    padding: 20,
+    margin: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  dueAmountContainer: {
+    flex: 1,
+  },
+  dueAmountLabel: {
+    fontSize: 14,
+    color: colors.backgroundAlt,
+    opacity: 0.8,
+    marginBottom: 4,
+    fontFamily: 'Nunito_400Regular',
+  },
+  dueAmountValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.backgroundAlt,
+    fontFamily: 'Poppins_700Bold',
+  },
+  payNowButton: {
+    backgroundColor: colors.accent,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  payNowButtonText: {
+    color: colors.backgroundAlt,
+    fontWeight: '600',
+    marginLeft: 8,
+    fontSize: 16,
+    fontFamily: 'Nunito_600SemiBold',
+  },
+  categoriesSection: {
+    padding: 16,
+    paddingTop: 0,
+  },
+  categoriesSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 12,
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  categoryCard: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  categoryInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  categoryIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.backgroundAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  categoryDetails: {
+    flex: 1,
+  },
+  categoryName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  categoryStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  categoryStatusText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.backgroundAlt,
+    fontFamily: 'Nunito_600SemiBold',
+  },
+  categoryAmount: {
+    alignItems: 'flex-end',
+  },
+  categoryAmountValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 4,
+    fontFamily: 'Poppins_700Bold',
+  },
+  categoryPayButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+  },
+  categoryPayButtonText: {
+    color: colors.backgroundAlt,
+    fontWeight: '600',
+    fontSize: 12,
+    fontFamily: 'Nunito_600SemiBold',
   },
   summaryContainer: {
     paddingHorizontal: 16,
@@ -408,5 +665,73 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontFamily: 'Nunito_400Regular',
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    width: '100%',
+    padding: 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  modalBody: {
+    marginBottom: 20,
+  },
+  modalAmount: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.primary,
+    textAlign: 'center',
+    marginBottom: 24,
+    fontFamily: 'Poppins_700Bold',
+  },
+  paymentMethodButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundAlt,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  paymentMethodText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginLeft: 12,
+    fontFamily: 'Nunito_600SemiBold',
+  },
+  cancelButton: {
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: colors.grey,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    fontFamily: 'Nunito_600SemiBold',
   },
 });
