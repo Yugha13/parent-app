@@ -1,662 +1,789 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  ScrollView, 
+  SafeAreaView, 
+  Animated,
+  Dimensions,
+  Platform
+} from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { colors, commonStyles } from '../styles/commonStyles';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
-import { mockChildren, mockHomework } from '../data/mockData';
-import { Child, Homework } from '../types';
-import i18n from '../utils/i18n';
+import { mockHomework, mockChildren } from '../data/mockData';
+import { Homework } from '../types';
+import { LinearGradient } from 'expo-linear-gradient';
 
-type FilterType = 'all' | 'pending' | 'completed' | 'overdue';
-type SectionType = 'today' | 'yesterday' | 'upcoming';
+const { width: screenWidth } = Dimensions.get('window');
 
-export default function HomeworkScreen() {
+export default function HomeworkPage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [selectedChild, setSelectedChild] = useState<Child>(mockChildren[0]);
-  const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
-  const [currentLanguage, setCurrentLanguage] = useState<string>(i18n.language);
-  const [expandedHomework, setExpandedHomework] = useState<string[]>([]);
-  const [expandedAttachment, setExpandedAttachment] = useState<string | null>(null);
-
-  const getFilteredHomework = (filter: FilterType): Homework[] => {
-    const homework = mockHomework[selectedChild.id] || [];
-    
-    switch (filter) {
-      case 'pending':
-        return homework.filter(item => item.status === 'pending');
-      case 'completed':
-        return homework.filter(item => item.status === 'completed');
-      case 'overdue':
-        return homework.filter(item => item.status === 'overdue');
-      default:
-        return homework;
-    }
-  };
-
-  const renderFilterSelector = () => (
-    <View style={styles.filterSelector}>
-      <TouchableOpacity
-        style={[styles.filterButton, selectedFilter === 'all' && styles.selectedFilterButton]}
-        onPress={() => setSelectedFilter('all')}
-      >
-        <Text style={[styles.filterText, selectedFilter === 'all' && styles.selectedFilterText]}>
-          {t('all')}
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={[styles.filterButton, selectedFilter === 'pending' && styles.selectedFilterButton]}
-        onPress={() => setSelectedFilter('pending')}
-      >
-        <Text style={[styles.filterText, selectedFilter === 'pending' && styles.selectedFilterText]}>
-          {t('pending')}
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={[styles.filterButton, selectedFilter === 'completed' && styles.selectedFilterButton]}
-        onPress={() => setSelectedFilter('completed')}
-      >
-        <Text style={[styles.filterText, selectedFilter === 'completed' && styles.selectedFilterText]}>
-          {t('completed')}
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={[styles.filterButton, selectedFilter === 'overdue' && styles.selectedFilterButton]}
-        onPress={() => setSelectedFilter('overdue')}
-      >
-        <Text style={[styles.filterText, selectedFilter === 'overdue' && styles.selectedFilterText]}>
-          {t('overdue')}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return colors.success;
-      case 'pending': return colors.warning;
-      case 'overdue': return colors.error;
-      default: return colors.textSecondary;
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'completed': return t('completed');
-      case 'pending': return t('pending');
-      case 'overdue': return t('overdue');
-      default: return status;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
+  const [selectedChild, setSelectedChild] = useState(mockChildren[0]);
+  const [selectedDate, setSelectedDate] = useState<'today' | 'yesterday'>('today');
+  const [isLoading, setIsLoading] = useState(true);
   
-  const getDueStatusText = (dueDate: string): string => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    const dueDateObj = new Date(dueDate);
-    dueDateObj.setHours(0, 0, 0, 0);
-    
-    if (dueDateObj.getTime() === today.getTime()) {
-      return t('dueToday');
-    } else if (dueDateObj.getTime() === tomorrow.getTime()) {
-      return t('dueTomorrow');
-    } else {
-      return `${t('due')}: ${formatDate(dueDate)}`;
-    }
-  };
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const tabSlideAnim = useRef(new Animated.Value(0)).current;
+  const cardAnimations = useRef<{ [key: string]: Animated.Value }>({}).current;
+  
+  // Get homework data for the selected child
+  const homeworkData = mockHomework[selectedChild.id] || [];
+  
+  useEffect(() => {
+    // Initial loading animation
+    setIsLoading(true);
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setIsLoading(false);
+    });
+  }, []);
 
-  const getHomeworkBySection = (section: SectionType): Homework[] => {
-    const homework = mockHomework[selectedChild.id] || [];
+  useEffect(() => {
+    // Tab transition animation
+    Animated.timing(tabSlideAnim, {
+      toValue: selectedDate === 'today' ? 0 : 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [selectedDate]);
+  
+  // Filter homework based on selected date
+  const getFilteredHomework = () => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
     
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    switch (section) {
-      case 'today':
-        return homework.filter(item => {
-          const dueDate = new Date(item.dueDate);
-          dueDate.setHours(0, 0, 0, 0);
-          return dueDate.getTime() === today.getTime() || dueDate.getTime() === tomorrow.getTime();
-        });
-      case 'yesterday':
-        return homework.filter(item => {
-          const dueDate = new Date(item.dueDate);
-          dueDate.setHours(0, 0, 0, 0);
-          return dueDate.getTime() === yesterday.getTime();
-        });
-      case 'upcoming':
-        return homework.filter(item => {
-          const dueDate = new Date(item.dueDate);
-          dueDate.setHours(0, 0, 0, 0);
-          return dueDate.getTime() > tomorrow.getTime();
-        });
-      default:
-        return [];
-    }
-  };
-  
-  const renderSectionHeader = (title: string, count: number) => (
-    <View style={styles.sectionHeader}>
-      <View style={styles.sectionTitleContainer}>
-        <Ionicons 
-          name="book-outline" 
-          size={20} 
-          color={colors.primary} 
-          style={styles.sectionIcon} 
-        />
-        <Text style={styles.sectionTitle}>{title}</Text>
-      </View>
-      <View style={styles.countBadge}>
-        <Text style={styles.countText}>{count}</Text>
-      </View>
-    </View>
-  );
-  
-  const renderYesterdayHomeworkStatus = () => {
-    const yesterdayHomework = getHomeworkBySection('yesterday');
-    
-    // Count homework by status
-    const statusCounts = {
-      completed: 0,
-      pending: 0,
-      overdue: 0
-    };
-    
-    yesterdayHomework.forEach(hw => {
-      statusCounts[hw.status as keyof typeof statusCounts]++;
-    });
-    
-    // Create summary text
-    const summaryParts = [];
-    if (statusCounts.completed > 0) {
-      summaryParts.push(`${statusCounts.completed} ${t('completed')}`);
-    }
-    if (statusCounts.pending > 0) {
-      summaryParts.push(`${statusCounts.pending} ${t('pending')}`);
-    }
-    if (statusCounts.overdue > 0) {
-      summaryParts.push(`${statusCounts.overdue} ${t('overdue')}`);
-    }
-    
-    const summaryText = summaryParts.join(', ');
-    
-    return (
-      <View style={styles.yesterdayStatusContainer}>
-        <Text style={styles.sectionTitle}>{t('yesterdayHomeworkStatus')}</Text>
-        
-        {yesterdayHomework.length > 0 ? (
-          <>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.statusChipsContainer}
-            >
-              {yesterdayHomework.map(hw => (
-                <View 
-                  key={hw.id} 
-                  style={[styles.statusChip, { backgroundColor: getStatusColor(hw.status) }]}
-                >
-                  <Text style={styles.statusChipText}>{hw.subject}</Text>
-                </View>
-              ))}
-            </ScrollView>
-            
-            <Text style={styles.statusSummary}>{summaryText}</Text>
-          </>
-        ) : (
-          <View style={styles.emptySection}>
-            <Text style={styles.emptySectionText}>{t('noHomeworkYesterday')}</Text>
-          </View>
-        )}
-      </View>
-    );
-  };
-  
-  const renderHomeworkCard = (homework: Homework, isExpanded: boolean) => {
-    const toggleExpand = () => {
-      if (isExpanded) {
-        setExpandedHomework(expandedHomework.filter(id => id !== homework.id));
+    return homeworkData.filter(homework => {
+      const dueDate = new Date(homework.dueDate);
+      if (selectedDate === 'today') {
+        return dueDate.toDateString() === today.toDateString();
       } else {
-        setExpandedHomework([...expandedHomework, homework.id]);
+        return dueDate.toDateString() === yesterday.toDateString();
       }
+    });
+  };
+  
+  // Get homework by status for yesterday view
+  const getHomeworkByStatus = () => {
+    const filtered = getFilteredHomework();
+    return {
+      completed: filtered.filter(h => h.status === 'completed'),
+      pending: filtered.filter(h => h.status === 'pending'),
+      overdue: filtered.filter(h => h.status === 'overdue')
     };
-    
-    const handleAttachmentPress = (attachmentId: string) => {
-      // In a real app, this would open the attachment or download it
-      setExpandedAttachment(expandedAttachment === attachmentId ? null : attachmentId);
+  };
+  
+  const getSubjectColor = (subject: string) => {
+    const colorMap = {
+      'Mathematics': '#6366F1', // Indigo
+      'Math': '#6366F1',
+      'Science': '#F59E0B', // Amber
+      'History': '#10B981', // Emerald
+      'English': '#8B5CF6', // Violet
+      'Physics': '#EF4444', // Red
+      'Chemistry': '#06B6D4', // Cyan
+      'Biology': '#84CC16', // Lime
     };
+    return colorMap[subject as keyof typeof colorMap] || '#6B7280';
+  };
+  
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return {
+          color: '#10B981',
+          backgroundColor: '#D1FAE5',
+          textColor: '#065F46',
+          icon: 'checkmark-circle',
+          text: 'Completed'
+        };
+      case 'pending':
+        return {
+          color: '#F59E0B',
+          backgroundColor: '#FEF3C7',
+          textColor: '#92400E',
+          icon: 'time',
+          text: 'Pending'
+        };
+      case 'overdue':
+        return {
+          color: '#EF4444',
+          backgroundColor: '#FEE2E2',
+          textColor: '#991B1B',
+          icon: 'alert-circle',
+          text: 'Not Submitted'
+        };
+      default:
+        return {
+          color: '#6B7280',
+          backgroundColor: '#F3F4F6',
+          textColor: '#374151',
+          icon: 'help-circle',
+          text: 'Unknown'
+        };
+    }
+  };
+
+  const animateCard = (cardId: string) => {
+    if (!cardAnimations[cardId]) {
+      cardAnimations[cardId] = new Animated.Value(1);
+    }
     
-    const attachmentsCount = homework.attachments?.length || 0;
+    Animated.sequence([
+      Animated.timing(cardAnimations[cardId], {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(cardAnimations[cardId], {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+  
+  const renderHomeworkCard = (homework: Homework, index: number) => {
+    const subjectColor = getSubjectColor(homework.subject);
+    const statusConfig = getStatusConfig(homework.status);
+    const cardId = `${homework.id}-${index}`;
+    
+    if (!cardAnimations[cardId]) {
+      cardAnimations[cardId] = new Animated.Value(1);
+    }
+
+    const cardStyle = selectedDate === 'yesterday' 
+      ? [styles.homeworkCardYesterday, { backgroundColor: statusConfig.backgroundColor }]
+      : styles.homeworkCard;
     
     return (
-      <TouchableOpacity 
-        key={homework.id} 
-        style={styles.homeworkCard}
-        onPress={toggleExpand}
-        activeOpacity={0.7}
+      <Animated.View
+        key={cardId}
+        style={[
+          cardStyle,
+          {
+            transform: [
+              { scale: cardAnimations[cardId] },
+              { 
+                translateY: fadeAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                })
+              }
+            ],
+            opacity: fadeAnim,
+          }
+        ]}
       >
-        <View style={styles.homeworkHeader}>
-          <Text style={styles.subject}>{homework.subject}</Text>
-          <Text style={styles.dueStatus}>
-            {getDueStatusText(homework.dueDate)}
-          </Text>
-        </View>
-        
-        <Text style={styles.title}>{homework.title}</Text>
-        
-        <Text 
-          style={styles.description} 
-          numberOfLines={isExpanded ? undefined : 2}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => animateCard(cardId)}
+          style={styles.cardTouchable}
         >
-          {homework.description}
-        </Text>
-        
-        {attachmentsCount > 0 && (
-          <TouchableOpacity 
-            style={styles.attachmentsContainer}
-            onPress={() => handleAttachmentPress(homework.attachments![0].id)}
-          >
-            <Ionicons name="attach-outline" size={16} color={colors.primary} />
-            <Text style={styles.attachmentsText}>
-              {attachmentsCount} {attachmentsCount === 1 ? t('attachment') : t('attachments')}
-            </Text>
-          </TouchableOpacity>
-        )}
-        
-        {isExpanded && homework.attachments && (
-          <View style={styles.expandedContent}>
-            {homework.attachments.map(attachment => (
-              <TouchableOpacity 
-                key={attachment.id} 
-                style={styles.attachmentItem}
-                onPress={() => handleAttachmentPress(attachment.id)}
-              >
-                <Ionicons 
-                  name={attachment.type === 'pdf' ? 'document-outline' : 'document-text-outline'} 
-                  size={20} 
-                  color={colors.primary} 
-                />
-                <Text style={styles.attachmentName}>{attachment.name}</Text>
-              </TouchableOpacity>
-            ))}
-            
-            <View style={styles.homeworkFooter}>
-              <View style={styles.teacherContainer}>
-                <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
-                <Text style={styles.teacher}>{homework.teacher}</Text>
+          {selectedDate === 'today' && (
+            <View style={[styles.subjectIndicator, { backgroundColor: subjectColor }]} />
+          )}
+          
+          <View style={styles.cardContent}>
+            <View style={styles.cardHeader}>
+              <View style={styles.subjectRow}>
+                <Text style={[
+                  styles.subjectTitle, 
+                  selectedDate === 'yesterday' && { color: statusConfig.textColor }
+                ]}>
+                  {homework.subject}
+                </Text>
+                {selectedDate === 'yesterday' && (
+                  <Ionicons 
+                    name={statusConfig.icon as any} 
+                    size={16} 
+                    color={statusConfig.color} 
+                    style={styles.statusIcon}
+                  />
+                )}
               </View>
               
-              {homework.status !== 'completed' && (
-                <TouchableOpacity style={styles.completeButton}>
-                  <Ionicons name="checkmark" size={16} color={colors.backgroundAlt} />
-                  <Text style={styles.completeButtonText}>{t('markAsCompleted')}</Text>
-                </TouchableOpacity>
-              )}
+              <View style={[
+                styles.statusBadge, 
+                { 
+                  backgroundColor: selectedDate === 'today' ? subjectColor : statusConfig.color,
+                }
+              ]}>
+                <Text style={styles.statusText}>
+                  {selectedDate === 'today' ? 'Due Today' : statusConfig.text}
+                </Text>
+              </View>
             </View>
+            
+            <Text style={[
+              styles.description,
+              selectedDate === 'yesterday' && { color: statusConfig.textColor }
+            ]}>
+              {selectedDate === 'yesterday' && homework.status === 'completed' 
+                ? `Completed ${homework.title.toLowerCase()}`
+                : homework.description
+              }
+            </Text>
+            
+            {homework.attachments && homework.attachments.length > 0 && (
+              <View style={styles.attachmentRow}>
+                <View style={[styles.attachmentBadge, { backgroundColor: subjectColor + '20' }]}>
+                  <Ionicons name="attach" size={14} color={subjectColor} />
+                  <Text style={[styles.attachmentText, { color: subjectColor }]}>
+                    {homework.attachments.length} Attachment{homework.attachments.length > 1 ? 's' : ''}
+                  </Text>
+                </View>
+              </View>
+            )}
+            
+            {selectedDate === 'today' && (
+              <TouchableOpacity style={styles.actionButton}>
+                <View style={[styles.radioButton, { borderColor: subjectColor }]}>
+                  <View style={[styles.radioCircle, { backgroundColor: 'transparent' }]} />
+                </View>
+              </TouchableOpacity>
+            )}
           </View>
-        )}
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </Animated.View>
     );
   };
   
-  const filteredHomework = getFilteredHomework(selectedFilter);
-  const todayHomework = getHomeworkBySection('today');
-  const yesterdayHomework = getHomeworkBySection('yesterday');
-  const upcomingHomework = getHomeworkBySection('upcoming');
-
-  // Function to toggle language between English and Tamil
-  const toggleLanguage = () => {
-    const newLanguage = currentLanguage === 'en' ? 'ta' : 'en';
-    i18n.changeLanguage(newLanguage);
-    setCurrentLanguage(newLanguage);
+  const renderTodayView = () => {
+    const todayHomework = getFilteredHomework();
+    
+    return (
+      <Animated.View 
+        style={[
+          styles.section,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }
+        ]}
+      >
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Today's Homework</Text>
+          <TouchableOpacity style={styles.filterButton}>
+            <Ionicons name="filter" size={18} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+        
+        {todayHomework.length === 0 ? (
+          <Animated.View 
+            style={[
+              styles.emptyState,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: fadeAnim }]
+              }
+            ]}
+          >
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="checkmark-circle" size={64} color={colors.success} />
+            </View>
+            <Text style={styles.emptyTitle}>All caught up!</Text>
+            <Text style={styles.emptyText}>No homework due today. Great job!</Text>
+          </Animated.View>
+        ) : (
+          todayHomework.map((homework, index) => renderHomeworkCard(homework, index))
+        )}
+      </Animated.View>
+    );
   };
-
+  
+  const renderYesterdayView = () => {
+    const { completed, pending, overdue } = getHomeworkByStatus();
+    const allHomework = [...completed, ...pending, ...overdue];
+    
+    return (
+      <Animated.View
+        style={{
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }]
+        }}
+      >
+        {completed.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Checked Homeworks</Text>
+              <View style={[styles.countBadge, { backgroundColor: colors.success + '20' }]}>
+                <Text style={[styles.countText, { color: colors.success }]}>
+                  {completed.length}
+                </Text>
+              </View>
+            </View>
+            {completed.map((homework, index) => renderHomeworkCard(homework, index))}
+          </View>
+        )}
+        
+        {pending.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Pending Homeworks</Text>
+              <View style={[styles.countBadge, { backgroundColor: colors.warning + '20' }]}>
+                <Text style={[styles.countText, { color: colors.warning }]}>
+                  {pending.length}
+                </Text>
+              </View>
+            </View>
+            {pending.map((homework, index) => renderHomeworkCard(homework, index))}
+          </View>
+        )}
+        
+        {overdue.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Overdue Homeworks</Text>
+              <View style={[styles.countBadge, { backgroundColor: colors.error + '20' }]}>
+                <Text style={[styles.countText, { color: colors.error }]}>
+                  {overdue.length}
+                </Text>
+              </View>
+            </View>
+            {overdue.map((homework, index) => renderHomeworkCard(homework, index))}
+          </View>
+        )}
+        
+        {allHomework.length === 0 && (
+          <Animated.View 
+            style={[
+              styles.emptyState,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: fadeAnim }]
+              }
+            ]}
+          >
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="calendar-outline" size={64} color={colors.textSecondary} />
+            </View>
+            <Text style={styles.emptyTitle}>No homework yesterday</Text>
+            <Text style={styles.emptyText}>Check back tomorrow for new assignments</Text>
+          </Animated.View>
+        )}
+      </Animated.View>
+    );
+  };
+  
   return (
-    <View style={commonStyles.container}>
+    <SafeAreaView style={commonStyles.wrapper}>
       <Stack.Screen
         options={{
-          headerShown: true,
-          title: t('homeworkUpdates'),
-          headerTitleStyle: commonStyles.title,
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
-            </TouchableOpacity>
-          ),
+          title: 'Homework Page',
+          headerStyle: { backgroundColor: colors.background },
+          headerShadowVisible: false,
           headerRight: () => (
-            <TouchableOpacity onPress={toggleLanguage} style={styles.languageButton}>
-              <Text style={styles.languageButtonText}>
-                {currentLanguage === 'en' ? 'தமிழ்' : 'English'}
-              </Text>
+            <TouchableOpacity style={styles.figmaButton}>
+              <Ionicons name="logo-figma" size={18} color={colors.text} />
+              <Text style={styles.figmaText}>Copy to Figma</Text>
             </TouchableOpacity>
           ),
         }}
       />
-
-      {/* Header Section */}
-      <View style={styles.headerSection}>
-        <Text style={styles.headerTitle}>{t('homeworkUpdates')}</Text>
-        <Text style={styles.headerSubtext}>{t('trackHomework')}</Text>
-      </View>
-
-      <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
-        {/* Today's Homework Section */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>{t('todayHomework')}</Text>
-          
-          {todayHomework.length > 0 ? (
-            <FlatList
-              data={todayHomework}
-              renderItem={({ item }) => renderHomeworkCard(item, expandedHomework.includes(item.id))}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              contentContainerStyle={styles.homeworkList}
-            />
-          ) : (
-            <View style={styles.emptySection}>
-              <Text style={styles.emptySectionText}>{t('noHomeworkToday')}</Text>
+      
+      <ScrollView 
+        style={styles.container} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Enhanced Header Banner */}
+        <Animated.View
+          style={[
+            styles.headerBanner,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
+          <LinearGradient
+            colors={['#6366F1', '#8B5CF6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradientBackground}
+          >
+            <View style={styles.headerContent}>
+              <Text style={styles.headerTitle}>Homework Assignments</Text>
+              <Text style={styles.headerSubtitle}>
+                Track and manage {selectedDate === 'today' ? "today's" : "yesterday's"} tasks.
+              </Text>
             </View>
-          )}
-        </View>
+            <TouchableOpacity style={styles.calendarButton}>
+              <Ionicons name="calendar" size={24} color="white" />
+            </TouchableOpacity>
+          </LinearGradient>
+        </Animated.View>
         
-        {/* Yesterday's Homework Status Section */}
-        {renderYesterdayHomeworkStatus()}
-        
-        {/* Filter Section - Only show if filter is selected */}
-        {selectedFilter !== 'all' && (
-          <View style={styles.sectionContainer}>
-            {renderFilterSelector()}
-            {renderSectionHeader(t('filteredHomework'), filteredHomework.length)}
-            {filteredHomework.length > 0 ? (
-              filteredHomework.map((homework) => 
-                renderHomeworkCard(homework, expandedHomework.includes(homework.id))
-              )
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="book-outline" size={64} color={colors.grey} />
-                <Text style={styles.emptyText}>
-                  {t('noHomeworkFound')}
-                </Text>
-              </View>
-            )}
+        {/* Enhanced Date Navigation */}
+        <Animated.View
+          style={[
+            styles.dateNavigation,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
+          <View style={styles.tabContainer}>
+            <Animated.View
+              style={[
+                styles.tabIndicator,
+                {
+                  transform: [
+                    {
+                      translateX: tabSlideAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [4, screenWidth / 2 - 20],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+            
+            <TouchableOpacity
+              style={[
+                styles.dateTab,
+                selectedDate === 'today' && styles.dateTabActive
+              ]}
+              onPress={() => setSelectedDate('today')}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                styles.dateTabText,
+                selectedDate === 'today' && styles.dateTabTextActive
+              ]}>
+                Today
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.dateTab,
+                selectedDate === 'yesterday' && styles.dateTabActive
+              ]}
+              onPress={() => setSelectedDate('yesterday')}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                styles.dateTabText,
+                selectedDate === 'yesterday' && styles.dateTabTextActive
+              ]}>
+                Yesterday
+              </Text>
+            </TouchableOpacity>
           </View>
-        )}
-
-        <View style={{ height: 20 }} />
+        </Animated.View>
+        
+        {/* Content */}
+        <View style={styles.content}>
+          {selectedDate === 'today' ? renderTodayView() : renderYesterdayView()}
+        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  backButton: {
-    marginLeft: 16,
-  },
-  languageButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 16,
-  },
-  languageButtonText: {
-    color: colors.backgroundAlt,
-    fontWeight: '600',
-    fontSize: 14,
-    fontFamily: 'Nunito_600SemiBold',
-  },
-  headerSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: colors.backgroundAlt,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.grey,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-    fontFamily: 'Poppins_700Bold',
-    marginBottom: 4,
-  },
-  headerSubtext: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    fontFamily: 'Nunito_400Regular',
-  },
-  sectionContainer: {
-    marginBottom: 24,
-  },
-  homeworkList: {
-    paddingTop: 8,
-  },
-  filterSelector: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    marginBottom: 8,
-  },
-  filterButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginRight: 8,
-    borderRadius: 20,
+  container: {
+    flex: 1,
     backgroundColor: colors.background,
   },
-  selectedFilterButton: {
-    backgroundColor: colors.primary,
+  scrollContent: {
+    paddingBottom: 20,
   },
-  filterText: {
-    fontSize: 14,
-    fontWeight: '600',
+  figmaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: colors.grey,
+  },
+  figmaText: {
+    marginLeft: 4,
+    fontSize: 12,
+    fontWeight: '500',
     color: colors.text,
-    fontFamily: 'Nunito_600SemiBold',
   },
-  selectedFilterText: {
-    color: colors.backgroundAlt,
+  headerBanner: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+  },
+  gradientBackground: {
+    padding: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerContent: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 6,
+    fontFamily: 'Poppins_700Bold',
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    color: 'white',
+    opacity: 0.9,
+    fontFamily: 'Nunito_400Regular',
+  },
+  calendarButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateNavigation: {
+    marginHorizontal: 16,
+    marginTop: 24,
+  },
+  tabContainer: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 4,
+    position: 'relative',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  tabIndicator: {
+    position: 'absolute',
+    top: 4,
+    left: 0,
+    right: 0,
+    height: 44,
+    width: screenWidth / 2 - 24,
+    backgroundColor: '#6366F1',
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  dateTab: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  dateTabActive: {
+    // Active styles handled by indicator
+  },
+  dateTabText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  dateTabTextActive: {
+    color: 'white',
+  },
+  content: {
+    paddingHorizontal: 16,
+    marginTop: 24,
+  },
+  section: {
+    marginBottom: 32,
   },
   sectionHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 8,
-    paddingHorizontal: 4,
-  },
-  sectionTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sectionIcon: {
-    marginRight: 8,
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.primary,
-    fontFamily: 'Poppins_600SemiBold',
-    marginBottom: 12,
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    fontFamily: 'Poppins_700Bold',
+  },
+  filterButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   countBadge: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 12,
   },
   countText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
-    color: colors.backgroundAlt,
-    fontFamily: 'Nunito_600SemiBold',
+    fontFamily: 'Poppins_600SemiBold',
   },
   homeworkCard: {
     backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 8,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-  },
-  homeworkHeader: {
+    borderRadius: 16,
+    marginBottom: 16,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
-  subject: {
-    fontSize: 16,
+  homeworkCardYesterday: {
+    borderRadius: 16,
+    marginBottom: 16,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  cardTouchable: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  subjectIndicator: {
+    width: 6,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
+  },
+  cardContent: {
+    flex: 1,
+    padding: 20,
+    position: 'relative',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  subjectRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  subjectTitle: {
+    fontSize: 18,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.text,
     fontFamily: 'Poppins_700Bold',
   },
-  dueStatus: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontFamily: 'Nunito_600SemiBold',
+  statusIcon: {
+    marginLeft: 8,
   },
-  title: {
-    fontSize: 16,
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'white',
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  description: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    lineHeight: 22,
+    marginBottom: 12,
+    fontFamily: 'Nunito_400Regular',
+  },
+  attachmentRow: {
+    marginBottom: 12,
+  },
+  attachmentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  attachmentText: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 6,
+    fontFamily: 'Nunito_500Medium',
+  },
+  actionButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+  },
+  radioButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioCircle: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  emptyIconContainer: {
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 20,
     fontWeight: '600',
     color: colors.text,
     marginBottom: 8,
     fontFamily: 'Poppins_600SemiBold',
-  },
-  description: {
-    fontSize: 14,
-    color: colors.text,
-    marginBottom: 12,
-    fontFamily: 'Nunito_400Regular',
-    lineHeight: 20,
-  },
-  attachmentsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  attachmentsText: {
-    fontSize: 13,
-    color: colors.primary,
-    marginLeft: 6,
-    fontFamily: 'Nunito_600SemiBold',
-  },
-  expandedContent: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.grey,
-  },
-  attachmentItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.grey,
-  },
-  attachmentName: {
-    fontSize: 14,
-    color: colors.text,
-    marginLeft: 8,
-    fontFamily: 'Nunito_400Regular',
-  },
-  homeworkFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  teacherContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  teacher: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginLeft: 4,
-    fontFamily: 'Nunito_400Regular',
-  },
-  completeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.success,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  completeButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.backgroundAlt,
-    marginLeft: 4,
-    fontFamily: 'Nunito_600SemiBold',
-  },
-  yesterdayStatusContainer: {
-    marginBottom: 24,
-  },
-  statusChipsContainer: {
-    marginBottom: 12,
-  },
-  statusChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
-    elevation: 1,
-  },
-  statusChipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.backgroundAlt,
-    fontFamily: 'Nunito_600SemiBold',
-  },
-  statusSummary: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    fontFamily: 'Nunito_400Regular',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
   },
   emptyText: {
     fontSize: 16,
     color: colors.textSecondary,
-    marginTop: 16,
-    fontFamily: 'Nunito_400Regular',
     textAlign: 'center',
-  },
-  emptySection: {
-    padding: 16,
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  emptySectionText: {
-    fontSize: 14,
-    color: colors.textSecondary,
+    lineHeight: 24,
     fontFamily: 'Nunito_400Regular',
   },
 });

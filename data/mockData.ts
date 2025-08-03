@@ -50,10 +50,10 @@ export const mockHomework: { [childId: string]: Homework[] } = {
   '1': [
     {
       id: '1',
-      subject: 'Mathematics',
+      subject: 'Math',
       title: 'Algebra Problems',
-      description: 'Complete exercises 1-15 from chapter 4. Focus on solving quadratic equations and factoring polynomials. Show all your work and circle your final answers.',
-      dueDate: '2024-01-25',
+      description: 'Complete exercises 1-5 on page 45.',
+      dueDate: new Date().toISOString().split('T')[0], // Today
       status: 'pending',
       teacher: 'Mrs. Patel',
       attachments: [
@@ -69,9 +69,9 @@ export const mockHomework: { [childId: string]: Homework[] } = {
       id: '2',
       subject: 'Science',
       title: 'Physics Lab Report',
-      description: 'Write a report on the pendulum experiment we conducted in class. Include your observations, data tables, and conclusions.',
-      dueDate: '2024-01-24',
-      status: 'completed',
+      description: 'Read Chapter 3: The Solar System.',
+      dueDate: new Date().toISOString().split('T')[0], // Today
+      status: 'pending',
       teacher: 'Mr. Kumar',
       attachments: [
         {
@@ -90,26 +90,75 @@ export const mockHomework: { [childId: string]: Homework[] } = {
     },
     {
       id: '3',
-      subject: 'English',
-      title: 'Essay Writing',
-      description: 'Write an essay on environmental conservation. Minimum 500 words, include at least three references.',
-      dueDate: '2024-01-20',
+      subject: 'History',
+      title: 'Research Assignment',
+      description: 'Research ancient civilizations for presentation.',
+      dueDate: new Date().toISOString().split('T')[0], // Today
+      status: 'pending',
+      teacher: 'Ms. Singh'
+    },
+    {
+      id: '4',
+      subject: 'Math',
+      title: 'Algebra Problems',
+      description: 'Complete exercises 1-5 on page 45.',
+      dueDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Yesterday
+      status: 'completed',
+      teacher: 'Mrs. Patel',
+      attachments: [
+        {
+          id: 'a4',
+          name: 'Algebra_Worksheet.pdf',
+          type: 'pdf',
+          url: 'https://example.com/files/algebra_worksheet.pdf'
+        }
+      ]
+    },
+    {
+      id: '5',
+      subject: 'History',
+      title: 'Research Assignment',
+      description: 'Research ancient civilizations for presentation.',
+      dueDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Yesterday
       status: 'overdue',
       teacher: 'Ms. Singh'
+    },
+    {
+      id: '6',
+      subject: 'Science',
+      title: 'Physics Lab Report',
+      description: 'Read Chapter 3: The Solar System.',
+      dueDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Yesterday
+      status: 'pending',
+      teacher: 'Mr. Kumar',
+      attachments: [
+        {
+          id: 'a5',
+          name: 'Lab_Report_Template.docx',
+          type: 'docx',
+          url: 'https://example.com/files/lab_report_template.docx'
+        },
+        {
+          id: 'a6',
+          name: 'Pendulum_Data.xlsx',
+          type: 'xlsx',
+          url: 'https://example.com/files/pendulum_data.xlsx'
+        }
+      ]
     }
   ],
   '2': [
     {
-      id: '4',
+      id: '7',
       subject: 'Mathematics',
       title: 'Multiplication Tables',
       description: 'Practice tables 12-15. Complete the worksheet and submit.',
-      dueDate: '2024-01-26',
+      dueDate: new Date().toISOString().split('T')[0], // Today
       status: 'pending',
       teacher: 'Mrs. Gupta',
       attachments: [
         {
-          id: 'a4',
+          id: 'a7',
           name: 'Multiplication_Practice.pdf',
           type: 'pdf',
           url: 'https://example.com/files/multiplication_practice.pdf'
@@ -117,11 +166,11 @@ export const mockHomework: { [childId: string]: Homework[] } = {
       ]
     },
     {
-      id: '5',
+      id: '8',
       subject: 'Hindi',
       title: 'Story Reading',
       description: 'Read chapter 3 and answer questions at the end of the chapter.',
-      dueDate: '2024-01-23',
+      dueDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Yesterday
       status: 'completed',
       teacher: 'Mr. Verma'
     }
