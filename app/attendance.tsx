@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { mockAttendance, mockChildren } from '../data/mockData';
 import { AttendanceRecord } from '../types';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface MonthlyAttendance {
   month: string;
@@ -100,10 +101,11 @@ export default function AttendancePage() {
       <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
         {/* Overall Attendance Card */}
         <View style={styles.overallCard}>
-          <Image 
-            source={require('../assets/images/final_quest_240x240.png')} 
-            style={styles.backgroundImage} 
-            resizeMode="cover"
+          <LinearGradient
+            colors={['#4CAF50', '#2E7D32']}
+            style={styles.backgroundGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
           />
           <View style={styles.overallContent}>
             <Text style={styles.overallText}>Overall Attendance</Text>
@@ -154,19 +156,19 @@ export default function AttendancePage() {
         {/* Summary Cards */}
         <View style={styles.summaryContainer}>
           <View style={[styles.summaryCard, styles.presentCard]}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.present} />
+            <Ionicons name="checkmark-circle" size={24} color={colors.present} />
             <Text style={styles.summaryLabel}>Present:</Text>
             <Text style={styles.summaryValue}>{presentDays} days</Text>
           </View>
           
           <View style={[styles.summaryCard, styles.absentCard]}>
-            <Ionicons name="close-circle" size={20} color={colors.absent} />
+            <Ionicons name="close-circle" size={24} color={colors.absent} />
             <Text style={styles.summaryLabel}>Absent:</Text>
             <Text style={styles.summaryValue}>{absentDays} day</Text>
           </View>
           
           <View style={[styles.summaryCard, styles.holidayCard]}>
-            <Ionicons name="calendar" size={20} color={colors.textSecondary} />
+            <Ionicons name="calendar" size={24} color="#4CAF50" />
             <Text style={styles.summaryLabel}>Holidays:</Text>
             <Text style={styles.summaryValue}>{holidayDays} day</Text>
           </View>
@@ -205,13 +207,13 @@ export default function AttendancePage() {
         options={{
           headerShown: true,
           title: selectedMonth ? `${selectedMonth.month} ${selectedMonth.year} Attendance` : t('attendance'),
-          headerTitleStyle: commonStyles.title,
+          headerTitleStyle: [commonStyles.title, { color: colors.primary }],
           headerLeft: () => (
             <TouchableOpacity 
               onPress={() => selectedMonth ? setSelectedMonth(null) : router.back()} 
               style={styles.backButton}
             >
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
+              <Ionicons name="arrow-back" size={24} color={colors.primary} />
             </TouchableOpacity>
           ),
         }}
@@ -227,25 +229,29 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '700',
-    color: colors.text,
+    color: '#2E7D32',
     marginTop: 24,
     marginBottom: 16,
     fontFamily: 'Poppins_700Bold',
   },
   overallCard: {
-    height: 180,
-    borderRadius: 16,
+    height: 220,
+    borderRadius: 24,
     overflow: 'hidden',
     position: 'relative',
     marginTop: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
-  backgroundImage: {
+  backgroundGradient: {
     position: 'absolute',
     width: '100%',
     height: '100%',
-    opacity: 0.8,
   },
   overallContent: {
     position: 'absolute',
@@ -253,39 +259,55 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'flex-start',
-    padding: 20,
+    padding: 24,
   },
   circularProgress: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 16,
+    borderWidth: 6,
+    borderColor: 'rgba(255, 255, 255, 0.6)',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   percentageText: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: '700',
-    color: colors.primary,
+    color: '#2E7D32',
     fontFamily: 'Poppins_700Bold',
   },
   overallText: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
     color: 'white',
     fontFamily: 'Poppins_700Bold',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
   monthCard: {
-    ...commonStyles.card,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginVertical: 6,
-    paddingVertical: 16,
+    marginVertical: 8,
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    borderLeftWidth: 5,
+    borderLeftColor: '#4CAF50',
   },
   monthInfo: {
     flexDirection: 'row',
@@ -298,87 +320,117 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_600SemiBold',
   },
   percentageBadgeText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
-    marginLeft: 12,
-    fontFamily: 'Nunito_600SemiBold',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#4CAF50',
+    marginLeft: 16,
+    fontFamily: 'Nunito_700Bold',
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   summaryContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 16,
+    marginTop: 20,
     marginBottom: 24,
   },
   summaryCard: {
     flex: 1,
     flexDirection: 'column',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    marginHorizontal: 4,
+    padding: 18,
+    borderRadius: 16,
+    marginHorizontal: 6,
     backgroundColor: colors.backgroundAlt,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   presentCard: {
     backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    borderTopWidth: 4,
+    borderTopColor: '#4CAF50',
   },
   absentCard: {
     backgroundColor: 'rgba(244, 67, 54, 0.1)',
+    borderTopWidth: 4,
+    borderTopColor: '#F44336',
   },
   holidayCard: {
-    backgroundColor: 'rgba(158, 158, 158, 0.1)',
+    backgroundColor: 'rgba(76, 175, 80, 0.05)',
+    borderTopWidth: 4,
+    borderTopColor: '#4CAF50',
   },
   summaryLabel: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text,
-    marginTop: 4,
+    marginTop: 8,
     fontFamily: 'Nunito_600SemiBold',
   },
   summaryValue: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: colors.textSecondary,
-    marginTop: 2,
-    fontFamily: 'Nunito_400Regular',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2E7D32',
+    marginTop: 4,
+    fontFamily: 'Nunito_700Bold',
   },
   dailyListContainer: {
     backgroundColor: colors.backgroundAlt,
     borderRadius: 16,
-    padding: 16,
+    padding: 24,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   dailyItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0, 0, 0, 0.05)',
   },
   dateText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text,
     fontFamily: 'Nunito_600SemiBold',
   },
   statusText: {
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'Nunito_600SemiBold',
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: 'Nunito_700Bold',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
   statusPresent: {
-    color: colors.present,
+    color: '#FFFFFF',
+    backgroundColor: '#4CAF50',
   },
   statusAbsent: {
-    color: colors.absent,
+    color: '#FFFFFF',
+    backgroundColor: '#F44336',
   },
   statusLate: {
-    color: colors.late,
+    color: '#FFFFFF',
+    backgroundColor: '#FF9800',
   },
   statusHoliday: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    fontFamily: 'Nunito_600SemiBold',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    backgroundColor: '#4CAF50',
+    fontFamily: 'Nunito_700Bold',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
 });

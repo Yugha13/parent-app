@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import { mockChildren, mockExamResults } from '../data/mockData';
-import { Child, ExamResult } from '../types/index';
+import { mockExamResults } from '../data/mockData';
+import { ExamResult } from '../types/index';
 import { useTranslation } from 'react-i18next';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type ExamType = 'unitTest1' | 'unitTest2' | 'unitTest3' | 'midTerm' | 'endTerm';
 
@@ -23,12 +24,11 @@ interface Subject {
 const ExamsScreen = () => {
   const { t } = useTranslation();
   const router = useRouter();
-  const [selectedChild, setSelectedChild] = useState<Child>(mockChildren[0]);
   const [selectedExamType, setSelectedExamType] = useState<ExamType>('unitTest1');
-  const [showSubjects, setShowSubjects] = useState(false);
+  const [showSubjects, setShowSubjects] = useState(true);
 
   // Mock data for exams
-  const examData = {
+  const examData: Record<ExamType, { subjects: Subject[] }> = {
     unitTest1: {
       subjects: [
         { id: '1', name: 'Mathematics', status: 'completed', marks: 85, totalMarks: 100, grade: 'A' },
@@ -152,10 +152,7 @@ const ExamsScreen = () => {
     return (
       <View style={styles.subjectsContainer}>
         <Text style={styles.subjectsTitle}>{t('subjects')}</Text>
-        <FlatList
-          data={subjects}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
+        {subjects.map((item) => (
             <View style={styles.subjectItem}>
               <View style={styles.subjectHeader}>
                 <Text style={styles.subjectName}>{item.name}</Text>
@@ -189,8 +186,7 @@ const ExamsScreen = () => {
                 <Text style={styles.pendingText}>{t('dateWillBeUpdated')}</Text>
               )}
             </View>
-          )}
-        />
+          ))}
       </View>
     );
   };
@@ -204,11 +200,21 @@ const ExamsScreen = () => {
           headerTitleStyle: styles.headerTitle,
           headerLeft: () => (
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#333" />
+              <Ionicons name="arrow-back" size={24} color="#2E7D32" />
             </TouchableOpacity>
           ),
         }}
       />
+      
+      <View style={styles.headerBackground}>
+        <LinearGradient
+          colors={['#4CAF50', '#2E7D32']}
+          style={styles.gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+        <Text style={styles.headerText}>{t('exams')}</Text>
+      </View>
 
       <ScrollView style={styles.scrollView}>
         {renderExamTypeSelector()}
@@ -221,75 +227,49 @@ const ExamsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f8f8',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: '#2E7D32',
   },
   backButton: {
     padding: 8,
   },
+  headerBackground: {
+    height: 120,
+    width: '100%',
+    position: 'relative',
+    marginBottom: 20,
+  },
+  gradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    height: '100%',
+  },
+  headerText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
   scrollView: {
     flex: 1,
     padding: 16,
-  },
-  childSelectorContainer: {
-    marginBottom: 16,
+    marginTop: -20,
   },
   selectorContainer: {
-    marginBottom: 16,
-  },
-  selectorLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#333',
-  },
-  childScroll: {
-    flexGrow: 0,
-  },
-  childButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#e0e0e0',
-    marginRight: 8,
-  },
-  selectedChildButton: {
-    backgroundColor: '#2196F3',
-  },
-  childButtonText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  selectedChildButtonText: {
-    color: '#fff',
-  },
-  examTypeScroll: {
-    flexGrow: 0,
-  },
-  examTypeButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#e0e0e0',
-    marginRight: 8,
-  },
-  selectedExamTypeButton: {
-    backgroundColor: '#2196F3',
-  },
-  examTypeText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  selectedExamTypeText: {
-    color: '#fff',
-  },
-  subjectsContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    marginBottom: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -297,73 +277,126 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  subjectsTitle: {
+  selectorLabel: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 16,
+    marginBottom: 12,
+    color: '#2E7D32',
+  },
+  examTypeScroll: {
+    flexGrow: 0,
+  },
+  examTypeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#e0e0e0',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  selectedExamTypeButton: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#2E7D32',
+  },
+  examTypeText: {
+    fontSize: 15,
+    fontWeight: '500',
     color: '#333',
+  },
+  selectedExamTypeText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  subjectsContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 20,
+  },
+  subjectsTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 20,
+    color: '#2E7D32',
   },
   subjectItem: {
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    paddingVertical: 12,
+    paddingVertical: 16,
+    marginBottom: 4,
   },
   subjectHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   subjectName: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 17,
+    fontWeight: '600',
     color: '#333',
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 12,
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#fff',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   resultContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: 'rgba(76, 175, 80, 0.05)',
+    padding: 10,
+    borderRadius: 8,
   },
   marksText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 15,
+    color: '#444',
   },
   marksValue: {
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: '#2E7D32',
   },
   gradeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
   },
   gradeText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   dateText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 15,
+    color: '#444',
+    backgroundColor: 'rgba(33, 150, 243, 0.05)',
+    padding: 10,
+    borderRadius: 8,
   },
   dateValue: {
-    fontWeight: '500',
-    color: '#2196F3',
+    fontWeight: '600',
+    color: '#1976D2',
   },
   pendingText: {
-    fontSize: 14,
+    fontSize: 15,
     fontStyle: 'italic',
     color: '#757575',
+    backgroundColor: 'rgba(255, 193, 7, 0.05)',
+    padding: 10,
+    borderRadius: 8,
+    textAlign: 'center',
   },
 });
 export default ExamsScreen;
