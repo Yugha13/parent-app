@@ -1,698 +1,369 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { colors, commonStyles } from '../styles/commonStyles';
-import { useTranslation } from 'react-i18next';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { mockChildren, mockExamResults } from '../data/mockData';
-import { Child, ExamResult } from '../types';
+import { Child, ExamResult } from '../types/index';
+import { useTranslation } from 'react-i18next';
 
-type PeriodType = 'recent' | 'thisMonth' | 'lastMonth' | 'allTime';
+type ExamType = 'unitTest1' | 'unitTest2' | 'unitTest3' | 'midTerm' | 'endTerm';
 
-export default function ExamsScreen() {
+interface Subject {
+  id: string;
+  name: string;
+  status: 'completed' | 'scheduled' | 'pending';
+  marks?: number;
+  totalMarks?: number;
+  grade?: string;
+  scheduledDate?: string;
+}
+
+const ExamsScreen = () => {
   const { t } = useTranslation();
   const router = useRouter();
   const [selectedChild, setSelectedChild] = useState<Child>(mockChildren[0]);
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('recent');
-  const [selectedSection, setSelectedSection] = useState<ExamSection>('upcoming');
+  const [selectedExamType, setSelectedExamType] = useState<ExamType>('unitTest1');
+  const [showSubjects, setShowSubjects] = useState(false);
 
-  // Mock upcoming exams data
-  const upcomingExams = [
-    {
-      id: 'up1',
-      subject: 'Mathematics',
-      name: 'Mid-term Exam',
-      date: '2024-02-15',
-      type: 'Mid-Term',
-      teacher: 'Mrs. Patel'
+  // Mock data for exams
+  const examData = {
+    unitTest1: {
+      subjects: [
+        { id: '1', name: 'Mathematics', status: 'completed', marks: 85, totalMarks: 100, grade: 'A' },
+        { id: '2', name: 'Science', status: 'completed', marks: 78, totalMarks: 100, grade: 'B+' },
+        { id: '3', name: 'English', status: 'scheduled', scheduledDate: '2024-03-15' },
+        { id: '4', name: 'Hindi', status: 'scheduled', scheduledDate: '2024-03-18' },
+        { id: '5', name: 'Social Studies', status: 'pending' },
+      ],
     },
-    {
-      id: 'up2',
-      subject: 'Science',
-      name: 'Unit Test 2',
-      date: '2024-02-10',
-      type: 'Unit Test',
-      teacher: 'Mr. Kumar'
+    unitTest2: {
+      subjects: [
+        { id: '6', name: 'Mathematics', status: 'scheduled', scheduledDate: '2024-04-10' },
+        { id: '7', name: 'Science', status: 'scheduled', scheduledDate: '2024-04-12' },
+        { id: '8', name: 'English', status: 'scheduled', scheduledDate: '2024-04-15' },
+        { id: '9', name: 'Hindi', status: 'scheduled', scheduledDate: '2024-04-18' },
+        { id: '10', name: 'Social Studies', status: 'pending' },
+      ],
     },
-    {
-      id: 'up3',
-      subject: 'English',
-      name: 'Mid-term Exam',
-      date: '2024-02-18',
-      type: 'Mid-Term',
-      teacher: 'Ms. Singh'
-    }
-  ];
+    unitTest3: {
+      subjects: [
+        { id: '11', name: 'Mathematics', status: 'pending' },
+        { id: '12', name: 'Science', status: 'pending' },
+        { id: '13', name: 'English', status: 'pending' },
+        { id: '14', name: 'Hindi', status: 'pending' },
+        { id: '15', name: 'Social Studies', status: 'pending' },
+      ],
+    },
+    midTerm: {
+      subjects: [
+        { id: '16', name: 'Mathematics', status: 'completed', marks: 92, totalMarks: 100, grade: 'A+' },
+        { id: '17', name: 'Science', status: 'completed', marks: 88, totalMarks: 100, grade: 'A' },
+        { id: '18', name: 'English', status: 'completed', marks: 95, totalMarks: 100, grade: 'A+' },
+        { id: '19', name: 'Hindi', status: 'completed', marks: 90, totalMarks: 100, grade: 'A+' },
+        { id: '20', name: 'Social Studies', status: 'completed', marks: 85, totalMarks: 100, grade: 'A' },
+      ],
+    },
+    endTerm: {
+      subjects: [
+        { id: '21', name: 'Mathematics', status: 'scheduled', scheduledDate: '2024-05-15' },
+        { id: '22', name: 'Science', status: 'scheduled', scheduledDate: '2024-05-17' },
+        { id: '23', name: 'English', status: 'scheduled', scheduledDate: '2024-05-20' },
+        { id: '24', name: 'Hindi', status: 'scheduled', scheduledDate: '2024-05-22' },
+        { id: '25', name: 'Social Studies', status: 'scheduled', scheduledDate: '2024-05-24' },
+      ],
+    },
+  };
 
-  // Mock ongoing exams data
-  const ongoingExams = [
-    {
-      id: 'on1',
-      subject: 'History',
-      name: 'Unit Test 1',
-      date: '2024-01-25',
-      type: 'Unit Test',
-      teacher: 'Mr. Sharma',
-      time: '09:00 AM - 10:30 AM'
-    }
-  ];
+  // Helper function to format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
 
-  const getExamsForPeriod = (period: PeriodType): ExamResult[] => {
-    const exams = mockExamResults[selectedChild.id] || [];
-    const now = new Date();
-    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    
-    switch (period) {
-      case 'recent':
-        return exams.slice(0, 5); // Most recent 5 exams
-      case 'thisMonth':
-        return exams.filter(exam => {
-          const examDate = new Date(exam.date);
-          return examDate >= thisMonthStart && examDate <= now;
-        });
-      case 'lastMonth':
-        return exams.filter(exam => {
-          const examDate = new Date(exam.date);
-          return examDate >= lastMonthStart && examDate < thisMonthStart;
-        });
-      case 'allTime':
-        return exams;
-      default:
-        return exams;
+  // Helper function to get subjects for the selected exam type
+  const getSubjectsForExamType = (examType: ExamType): Subject[] => {
+    return examData[examType].subjects;
+  };
+
+  // Function to get color based on grade
+  const getGradeColor = (grade: string) => {
+    switch (grade) {
+      case 'A+': return '#4CAF50';
+      case 'A': return '#8BC34A';
+      case 'B+': return '#CDDC39';
+      case 'B': return '#FFEB3B';
+      case 'C+': return '#FFC107';
+      case 'C': return '#FF9800';
+      case 'D': return '#FF5722';
+      case 'F': return '#F44336';
+      default: return '#757575';
     }
   };
 
-  const renderPeriodSelector = () => (
-    <View style={styles.periodSelector}>
-      <TouchableOpacity
-        style={[styles.periodButton, selectedPeriod === 'recent' && styles.selectedPeriodButton]}
-        onPress={() => setSelectedPeriod('recent')}
-      >
-        <Text style={[styles.periodText, selectedPeriod === 'recent' && styles.selectedPeriodText]}>
-          {t('recent')}
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={[styles.periodButton, selectedPeriod === 'thisMonth' && styles.selectedPeriodButton]}
-        onPress={() => setSelectedPeriod('thisMonth')}
-      >
-        <Text style={[styles.periodText, selectedPeriod === 'thisMonth' && styles.selectedPeriodText]}>
-          {t('thisMonth')}
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={[styles.periodButton, selectedPeriod === 'lastMonth' && styles.selectedPeriodButton]}
-        onPress={() => setSelectedPeriod('lastMonth')}
-      >
-        <Text style={[styles.periodText, selectedPeriod === 'lastMonth' && styles.selectedPeriodText]}>
-          {t('lastMonth')}
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={[styles.periodButton, selectedPeriod === 'allTime' && styles.selectedPeriodButton]}
-        onPress={() => setSelectedPeriod('allTime')}
-      >
-        <Text style={[styles.periodText, selectedPeriod === 'allTime' && styles.selectedPeriodText]}>
-          {t('allTime')}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-  
-  const renderSectionSelector = () => {
+  // Render exam type selector
+  const renderExamTypeSelector = () => {
+    const examTypes: { key: ExamType; label: string }[] = [
+      { key: 'unitTest1', label: t('unitTest1') },
+      { key: 'unitTest2', label: t('unitTest2') },
+      { key: 'unitTest3', label: t('unitTest3') },
+      { key: 'midTerm', label: t('midTerm') },
+      { key: 'endTerm', label: t('endTerm') },
+    ];
+
     return (
-      <View style={styles.sectionSelector}>
-        <TouchableOpacity
-          style={[styles.sectionButton, selectedSection === 'upcoming' && styles.selectedSectionButton]}
-          onPress={() => setSelectedSection('upcoming')}
-        >
-          <Text style={[styles.sectionText, selectedSection === 'upcoming' && styles.selectedSectionText]}>
-            {t('upcoming')}
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.sectionButton, selectedSection === 'ongoing' && styles.selectedSectionButton]}
-          onPress={() => setSelectedSection('ongoing')}
-        >
-          <Text style={[styles.sectionText, selectedSection === 'ongoing' && styles.selectedSectionText]}>
-            {t('ongoing')}
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.sectionButton, selectedSection === 'completed' && styles.selectedSectionButton]}
-          onPress={() => setSelectedSection('completed')}
-        >
-          <Text style={[styles.sectionText, selectedSection === 'completed' && styles.selectedSectionText]}>
-            {t('completed')}
-          </Text>
-        </TouchableOpacity>
+      <View style={styles.selectorContainer}>
+        <Text style={styles.selectorLabel}>{t('selectExamType')}</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.examTypeScroll}>
+          {examTypes.map((examType) => (
+            <TouchableOpacity
+              key={examType.key}
+              style={[
+                styles.examTypeButton,
+                selectedExamType === examType.key && styles.selectedExamTypeButton,
+              ]}
+              onPress={() => {
+                setSelectedExamType(examType.key);
+                setShowSubjects(true);
+              }}
+            >
+              <Text
+                style={[
+                  styles.examTypeText,
+                  selectedExamType === examType.key && styles.selectedExamTypeText,
+                ]}
+              >
+                {examType.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
     );
   };
+
   
-  const renderUpcomingExam = (exam: any) => (
-    <View key={exam.id} style={styles.examCard}>
-      <View style={styles.examHeader}>
-        <View style={styles.subjectContainer}>
-          <Text style={styles.subject}>{exam.subject}</Text>
-          <View style={[styles.typeBadge]}>
-            <Text style={styles.typeText}>{exam.type}</Text>
-          </View>
-        </View>
-        <Text style={styles.examDate}>
-          <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
-          {' '}{formatDate(exam.date)}
-        </Text>
-      </View>
-      
-      <Text style={styles.examName}>{exam.name}</Text>
-      
-      <View style={styles.examFooter}>
-        <View style={styles.teacherContainer}>
-          <Ionicons name="person-outline" size={14} color={colors.textSecondary} />
-          <Text style={styles.teacher}>{exam.teacher}</Text>
-        </View>
-      </View>
-    </View>
-  );
-  
-  const renderOngoingExam = (exam: any) => (
-    <View key={exam.id} style={[styles.examCard, styles.ongoingExamCard]}>
-      <View style={styles.examHeader}>
-        <View style={styles.subjectContainer}>
-          <Text style={styles.subject}>{exam.subject}</Text>
-          <View style={[styles.typeBadge, styles.ongoingBadge]}>
-            <Text style={styles.typeText}>{t('inProgress')}</Text>
-          </View>
-        </View>
-        <Text style={styles.examDate}>
-          <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
-          {' '}{formatDate(exam.date)}
-        </Text>
-      </View>
-      
-      <Text style={styles.examName}>{exam.name}</Text>
-      
-      <View style={styles.timeContainer}>
-        <Ionicons name="time-outline" size={16} color={colors.primary} />
-        <Text style={styles.examTime}>{exam.time}</Text>
-      </View>
-      
-      <View style={styles.examFooter}>
-        <View style={styles.teacherContainer}>
-          <Ionicons name="person-outline" size={14} color={colors.textSecondary} />
-          <Text style={styles.teacher}>{exam.teacher}</Text>
-        </View>
-      </View>
-    </View>
-  );
 
-  const getGradeColor = (grade: string) => {
-    switch (grade) {
-      case 'A+': case 'A': return colors.success;
-      case 'B+': case 'B': return colors.primary;
-      case 'C+': case 'C': return colors.warning;
-      case 'D': case 'F': return colors.error;
-      default: return colors.textSecondary;
-    }
+  // Render subject list
+  const renderSubjectList = () => {
+    const subjects = getSubjectsForExamType(selectedExamType);
+
+    return (
+      <View style={styles.subjectsContainer}>
+        <Text style={styles.subjectsTitle}>{t('subjects')}</Text>
+        <FlatList
+          data={subjects}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={styles.subjectItem}>
+              <View style={styles.subjectHeader}>
+                <Text style={styles.subjectName}>{item.name}</Text>
+                <View style={[styles.statusBadge, {
+                  backgroundColor: 
+                    item.status === 'completed' ? '#4CAF50' : 
+                    item.status === 'scheduled' ? '#2196F3' : '#FFC107'
+                }]}>
+                  <Text style={styles.statusText}>{t(item.status)}</Text>
+                </View>
+              </View>
+              
+              {item.status === 'completed' && (
+                <View style={styles.resultContainer}>
+                  <Text style={styles.marksText}>
+                    {t('marks')}: <Text style={styles.marksValue}>{item.marks}/{item.totalMarks}</Text>
+                  </Text>
+                  <View style={[styles.gradeBadge, { backgroundColor: getGradeColor(item.grade || '') }]}>
+                    <Text style={styles.gradeText}>{item.grade}</Text>
+                  </View>
+                </View>
+              )}
+              
+              {item.status === 'scheduled' && (
+                <Text style={styles.dateText}>
+                  {t('scheduledDate')}: <Text style={styles.dateValue}>{formatDate(item.scheduledDate || '')}</Text>
+                </Text>
+              )}
+              
+              {item.status === 'pending' && (
+                <Text style={styles.pendingText}>{t('dateWillBeUpdated')}</Text>
+              )}
+            </View>
+          )}
+        />
+      </View>
+    );
   };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric',
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
-
-  const filteredExams = getExamsForPeriod(selectedPeriod);
 
   return (
-    <View style={commonStyles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="auto" />
       <Stack.Screen
         options={{
-          headerShown: true,
-          title: t('exams'),
-          headerTitleStyle: commonStyles.title,
+          headerTitle: t('exams'),
+          headerTitleStyle: styles.headerTitle,
           headerLeft: () => (
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
+              <Ionicons name="arrow-back" size={24} color="#333" />
             </TouchableOpacity>
           ),
         }}
       />
 
-      {renderSectionSelector()}
-
-      <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
-        {selectedSection === 'upcoming' && (
-          <>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleContainer}>
-                <Ionicons 
-                  name="calendar-outline" 
-                  size={20} 
-                  color={colors.primary} 
-                  style={styles.sectionIcon}
-                />
-                <Text style={styles.sectionTitle}>{t('upcomingExams')}</Text>
-              </View>
-              <View style={styles.countBadge}>
-                <Text style={styles.countText}>{upcomingExams.length}</Text>
-              </View>
-            </View>
-            
-            {upcomingExams.length > 0 ? (
-              upcomingExams.map(exam => renderUpcomingExam(exam))
-            ) : (
-              <View style={styles.emptySection}>
-                <Text style={styles.emptySectionText}>{t('noUpcomingExams')}</Text>
-              </View>
-            )}
-          </>
-        )}
-        
-        {selectedSection === 'ongoing' && (
-          <>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleContainer}>
-                <Ionicons 
-                  name="time-outline" 
-                  size={20} 
-                  color={colors.primary} 
-                  style={styles.sectionIcon}
-                />
-                <Text style={styles.sectionTitle}>{t('ongoingExams')}</Text>
-              </View>
-              <View style={styles.countBadge}>
-                <Text style={styles.countText}>{ongoingExams.length}</Text>
-              </View>
-            </View>
-            
-            {ongoingExams.length > 0 ? (
-              ongoingExams.map(exam => renderOngoingExam(exam))
-            ) : (
-              <View style={styles.emptySection}>
-                <Text style={styles.emptySectionText}>{t('noOngoingExams')}</Text>
-              </View>
-            )}
-          </>
-        )}
-        
-        {selectedSection === 'completed' && (
-          <>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleContainer}>
-                <Ionicons 
-                  name="checkmark-circle-outline" 
-                  size={20} 
-                  color={colors.primary} 
-                  style={styles.sectionIcon}
-                />
-                <Text style={styles.sectionTitle}>{t('completedExams')}</Text>
-              </View>
-              <View style={styles.countBadge}>
-                <Text style={styles.countText}>{filteredExams.length}</Text>
-              </View>
-            </View>
-            
-            {renderPeriodSelector()}
-            
-            <View style={styles.statsContainer}>
-              <View style={styles.statCard}>
-                <Text style={styles.statValue}>
-                  {filteredExams.length > 0 
-                    ? (filteredExams.reduce((sum, exam) => sum + exam.marks, 0) / filteredExams.length).toFixed(1)
-                    : '-'}
-                </Text>
-                <Text style={styles.statLabel}>{t('avgMarks')}</Text>
-              </View>
-              
-              <View style={styles.statCard}>
-                <Text style={styles.statValue}>
-                  {filteredExams.length > 0 
-                    ? filteredExams.reduce((best, exam) => Math.max(best, exam.marks), 0)
-                    : '-'}
-                </Text>
-                <Text style={styles.statLabel}>{t('highestMarks')}</Text>
-              </View>
-              
-              <View style={styles.statCard}>
-                <Text style={styles.statValue}>{filteredExams.length}</Text>
-                <Text style={styles.statLabel}>{t('totalExams')}</Text>
-              </View>
-            </View>
-
-            {filteredExams.length > 0 ? (
-              filteredExams.map((exam) => (
-                <View key={exam.id} style={styles.examCard}>
-                  <View style={styles.examHeader}>
-                    <View style={styles.subjectContainer}>
-                      <Text style={styles.subject}>{exam.subject}</Text>
-                      <View style={[styles.gradeBadge, { backgroundColor: getGradeColor(exam.grade) }]}>
-                        <Text style={styles.gradeText}>{exam.grade}</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.examDate}>
-                      <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
-                      {' '}{formatDate(exam.date)}
-                    </Text>
-                  </View>
-                  
-                  <Text style={styles.examName}>{exam.name}</Text>
-                  
-                  <View style={styles.marksContainer}>
-                    <View style={styles.marksBar}>
-                      <View 
-                        style={[styles.marksProgress, { width: `${(exam.marks / exam.totalMarks) * 100}%` }]}
-                      />
-                    </View>
-                    <Text style={styles.marksText}>
-                      {exam.marks}/{exam.totalMarks} {t('marks')}
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.examFooter}>
-                    <View style={styles.teacherContainer}>
-                      <Ionicons name="person-outline" size={14} color={colors.textSecondary} />
-                      <Text style={styles.teacher}>{exam.teacher}</Text>
-                    </View>
-                    
-                    <TouchableOpacity 
-                      style={styles.reportButton}
-                      onPress={() => console.log('Download report:', exam.id)}
-                    >
-                      <Ionicons name="download-outline" size={16} color={colors.backgroundAlt} />
-                      <Text style={styles.reportButtonText}>{t('downloadReport')}</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="school-outline" size={64} color={colors.grey} />
-                <Text style={styles.emptyText}>
-                  {t('noExamsFound')}
-                </Text>
-              </View>
-            )}
-          </>
-        )}
-
-        <View style={{ height: 20 }} />
+      <ScrollView style={styles.scrollView}>
+        {renderExamTypeSelector()}
+        {showSubjects && renderSubjectList()}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  backButton: {
-    marginLeft: 16,
-  },
-  sectionSelector: {
-    flexDirection: 'row',
-    backgroundColor: colors.backgroundAlt,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.grey,
-  },
-  sectionButton: {
+  container: {
     flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    backgroundColor: '#f5f5f5',
   },
-  selectedSectionButton: {
-    borderBottomColor: colors.primary,
-  },
-  sectionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    fontFamily: 'Nunito_600SemiBold',
-  },
-  selectedSectionText: {
-    color: colors.primary,
-  },
-  periodSelector: {
-    flexDirection: 'row',
-    backgroundColor: colors.backgroundAlt,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.grey,
-    marginTop: 8,
-  },
-  periodButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginRight: 8,
-    borderRadius: 20,
-    backgroundColor: colors.background,
-  },
-  selectedPeriodButton: {
-    backgroundColor: colors.primary,
-  },
-  periodText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    fontFamily: 'Nunito_600SemiBold',
-  },
-  selectedPeriodText: {
-    color: colors.backgroundAlt,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 8,
-    paddingHorizontal: 4,
-  },
-  sectionTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sectionIcon: {
-    marginRight: 8,
-  },
-  sectionTitle: {
+  headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.text,
-    fontFamily: 'Poppins_600SemiBold',
+    color: '#333',
   },
-  countBadge: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
+  backButton: {
+    padding: 8,
   },
-  countText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.backgroundAlt,
-    fontFamily: 'Nunito_600SemiBold',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 16,
-  },
-  statCard: {
+  scrollView: {
     flex: 1,
-    backgroundColor: colors.card,
-    borderRadius: 16,
     padding: 16,
-    marginHorizontal: 4,
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.primary,
-    fontFamily: 'Poppins_700Bold',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontFamily: 'Nunito_400Regular',
-    textAlign: 'center',
-  },
-  examCard: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 16,
-    marginVertical: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  ongoingExamCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: colors.warning,
-  },
-  examHeader: {
-    marginBottom: 12,
-  },
-  subjectContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  subject: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primary,
-    fontFamily: 'Poppins_600SemiBold',
-  },
-  gradeBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  gradeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.backgroundAlt,
-    fontFamily: 'Poppins_700Bold',
-  },
-  typeBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: colors.secondary,
-  },
-  ongoingBadge: {
-    backgroundColor: colors.warning,
-  },
-  typeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.backgroundAlt,
-    fontFamily: 'Nunito_600SemiBold',
-  },
-  examDate: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontFamily: 'Nunito_400Regular',
-  },
-  examName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 12,
-    fontFamily: 'Poppins_600SemiBold',
-  },
-  marksContainer: {
+  childSelectorContainer: {
     marginBottom: 16,
   },
-  marksBar: {
-    height: 8,
-    backgroundColor: colors.grey,
-    borderRadius: 4,
-    marginBottom: 8,
-    overflow: 'hidden',
+  selectorContainer: {
+    marginBottom: 16,
   },
-  marksProgress: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 4,
+  selectorLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#333',
+  },
+  childScroll: {
+    flexGrow: 0,
+  },
+  childButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#e0e0e0',
+    marginRight: 8,
+  },
+  selectedChildButton: {
+    backgroundColor: '#2196F3',
+  },
+  childButtonText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  selectedChildButtonText: {
+    color: '#fff',
+  },
+  examTypeScroll: {
+    flexGrow: 0,
+  },
+  examTypeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#e0e0e0',
+    marginRight: 8,
+  },
+  selectedExamTypeButton: {
+    backgroundColor: '#2196F3',
+  },
+  examTypeText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  selectedExamTypeText: {
+    color: '#fff',
+  },
+  subjectsContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  subjectsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+    color: '#333',
+  },
+  subjectItem: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    paddingVertical: 12,
+  },
+  subjectHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  subjectName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '500',
+  },
+  resultContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   marksText: {
     fontSize: 14,
-    color: colors.text,
-    fontFamily: 'Nunito_600SemiBold',
-    textAlign: 'right',
+    color: '#666',
   },
-  examFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  marksValue: {
+    fontWeight: '600',
+    color: '#333',
   },
-  teacherContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  gradeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
   },
-  teacher: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginLeft: 4,
-    fontFamily: 'Nunito_400Regular',
-  },
-  reportButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  reportButtonText: {
+  gradeText: {
     fontSize: 12,
+    color: '#fff',
     fontWeight: '600',
-    color: colors.backgroundAlt,
-    marginLeft: 4,
-    fontFamily: 'Nunito_600SemiBold',
   },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    marginTop: 16,
-    fontFamily: 'Nunito_400Regular',
-    textAlign: 'center',
-  },
-  emptySection: {
-    padding: 16,
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  emptySectionText: {
+  dateText: {
     fontSize: 14,
-    color: colors.textSecondary,
-    fontFamily: 'Nunito_400Regular',
+    color: '#666',
   },
-  timeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginVertical: 12,
+  dateValue: {
+    fontWeight: '500',
+    color: '#2196F3',
   },
-  examTime: {
+  pendingText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
-    marginLeft: 8,
-    fontFamily: 'Nunito_600SemiBold',
+    fontStyle: 'italic',
+    color: '#757575',
   },
 });
+export default ExamsScreen;

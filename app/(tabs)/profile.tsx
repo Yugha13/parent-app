@@ -3,7 +3,6 @@ import { View, Text, ScrollView, TouchableOpacity, Modal, StyleSheet, Alert } fr
 import { Ionicons } from '@expo/vector-icons';
 import { colors, commonStyles } from '../../styles/commonStyles';
 import { useTranslation } from 'react-i18next';
-import { mockChildren } from '../../data/mockData';
 import { Child } from '../../types';
 
 const LANGUAGES = [
@@ -62,20 +61,7 @@ export default function ProfileScreen() {
     </TouchableOpacity>
   );
 
-  const renderChildCard = (child: Child) => (
-    <View key={child.id} style={styles.childCard}>
-      <View style={styles.childInfo}>
-        <Text style={styles.childName}>{child.name}</Text>
-        <Text style={styles.childDetails}>
-          {t('grade')} {child.grade} - {t('section')} {child.section}
-        </Text>
-        <Text style={styles.schoolName}>{child.school}</Text>
-      </View>
-      <TouchableOpacity style={styles.editButton}>
-        <Ionicons name="pencil" size={16} color={colors.primary} />
-      </TouchableOpacity>
-    </View>
-  );
+
 
   const renderLanguageModal = () => (
     <Modal
@@ -163,25 +149,22 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Linked Students Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t('linkedStudents')}</Text>
-          <TouchableOpacity style={styles.addButton}>
-            <Ionicons name="add" size={20} color={colors.primary} />
-            <Text style={styles.addButtonText}>Add Child</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={commonStyles.card}>
-          {mockChildren.map(renderChildCard)}
-        </View>
+      
 
         {/* App Info & Actions */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{t('information')}</Text>
+        </View>
         <View style={commonStyles.card}>
           {renderSettingItem('information-circle', t('appInfo'), 'Version 1.0.0')}
           {renderSettingItem('help-circle', 'Help & Support')}
           {renderSettingItem('shield-checkmark', 'Privacy Policy')}
           {renderSettingItem('document-text', 'Terms of Service')}
+        </View>
+
+        {/* Logout */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{t('logout')}</Text>
         </View>
 
         <View style={commonStyles.card}>
