@@ -4,6 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, commonStyles } from '../../styles/commonStyles';
 import { useTranslation } from 'react-i18next';
 import { Child } from '../../types';
+import { useAuth } from '../../utils/AuthContext';
+import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
 
 const LANGUAGES = [
   { code: 'en', name: 'English', nativeName: 'English' },
@@ -12,6 +15,15 @@ const LANGUAGES = [
 ];
 
 export default function ProfileScreen() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [user, loading]);
+  if (loading || !user) return null;
+
   const { t, i18n } = useTranslation();
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);

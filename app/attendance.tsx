@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { mockAttendance, mockChildren } from '../data/mockData';
 import { AttendanceRecord } from '../types';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from '../utils/AuthContext';
+import { useEffect } from 'react';
 
 interface MonthlyAttendance {
   month: string;
@@ -16,8 +18,16 @@ interface MonthlyAttendance {
 }
 
 export default function AttendancePage() {
-  const { t } = useTranslation();
+  const { user, loading } = useAuth();
   const router = useRouter();
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [user, loading]);
+  if (loading || !user) return null;
+
+  const { t } = useTranslation();
   const [selectedChild, setSelectedChild] = useState(mockChildren[0]);
   const [selectedMonth, setSelectedMonth] = useState<MonthlyAttendance | null>(null);
   

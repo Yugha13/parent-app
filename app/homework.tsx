@@ -17,12 +17,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { mockHomework, mockChildren } from '../data/mockData';
 import { Homework } from '../types';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from '../utils/AuthContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function HomeworkPage() {
-  const { t } = useTranslation();
+  const { user, loading } = useAuth();
   const router = useRouter();
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [user, loading]);
+  if (loading || !user) return null;
+
+  const { t } = useTranslation();
   const [selectedChild, setSelectedChild] = useState(mockChildren[0]);
   const [selectedDate, setSelectedDate] = useState<'today' | 'yesterday'>('today');
   const [isLoading, setIsLoading] = useState(true);

@@ -18,10 +18,19 @@ import {
 } from '../../data/mockData';
 import { Child } from '../../types';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../utils/AuthContext';
 
-export default function HomeScreen() {
-  const { t } = useTranslation();
+export default function TabHomeScreen() {
+  const { user, loading } = useAuth();
   const router = useRouter();
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [user, loading]);
+  if (loading || !user) return null;
+
+  const { t } = useTranslation();
   const [selectedChild, setSelectedChild] = useState<Child>(mockChildren[0]);
 
   const getGreeting = () => {

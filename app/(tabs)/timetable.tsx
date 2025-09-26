@@ -6,11 +6,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { mockChildren, mockTimetable } from '../../data/mockData';
 import { Child, TimetableEntry } from '../../types';
 import { StatusBar } from 'expo-status-bar';
+import { useAuth } from '../../utils/AuthContext';
+import { useRouter } from 'expo-router';
 
 // Define days of the week
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 export default function TimetableScreen() {
+  const { user, loading:data_loading } = useAuth();
+  const router = useRouter();
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [user, data_loading]);
+  if (data_loading || !user) return null;
+
   const { t } = useTranslation();
   const [selectedChild, setSelectedChild] = useState<Child>(mockChildren[0]);
   const [selectedDay, setSelectedDay] = useState<string>('Monday');

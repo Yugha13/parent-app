@@ -6,12 +6,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { mockChildren, mockFees } from '../data/mockData';
 import { Child, Fee } from '../types';
+import { useAuth } from '../utils/AuthContext';
+import { useEffect } from 'react';
 
 type FilterType = 'all' | 'paid' | 'pending' | 'overdue';
 
 export default function FeesScreen() {
-  const { t } = useTranslation();
+  const { user, loading } = useAuth();
   const router = useRouter();
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [user, loading]);
+  if (loading || !user) return null;
+
+  const { t } = useTranslation();
   const [selectedChild, setSelectedChild] = useState<Child>(mockChildren[0]);
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);

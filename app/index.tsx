@@ -1,5 +1,18 @@
-import { Redirect } from 'expo-router';
+import React, { useEffect } from 'react';
+import { useRouter } from 'expo-router';
+import { useAuth } from '../utils/AuthContext';
 
-export default function Index() {
-  return <Redirect href="/(tabs)" />;
+export default function HomeScreen() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [user, loading]);
+
+  if (loading || !user) {
+    return null;
+  }
 }

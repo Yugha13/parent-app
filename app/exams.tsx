@@ -8,6 +8,8 @@ import { mockExamResults } from '../data/mockData';
 import { ExamResult } from '../types/index';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from '../utils/AuthContext';
+import { useEffect } from 'react';
 
 type ExamType = 'unitTest1' | 'unitTest2' | 'unitTest3' | 'midTerm' | 'endTerm';
 
@@ -21,9 +23,17 @@ interface Subject {
   scheduledDate?: string;
 }
 
-const ExamsScreen = () => {
-  const { t } = useTranslation();
+export default function ExamsScreen() {
+  const { user, loading } = useAuth();
   const router = useRouter();
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [user, loading]);
+  if (loading || !user) return null;
+
+  const { t } = useTranslation();
   const [selectedExamType, setSelectedExamType] = useState<ExamType>('unitTest1');
   const [showSubjects, setShowSubjects] = useState(true);
 
@@ -399,4 +409,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-export default ExamsScreen;

@@ -5,10 +5,22 @@ import { colors, commonStyles } from '../../styles/commonStyles';
 import { useTranslation } from 'react-i18next';
 import { mockNotices, mockMessages } from '../../data/mockData';
 import { Notice, Message } from '../../types';
+import { useAuth } from '../../utils/AuthContext';
+import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
 
 type TabType = 'notices' | 'messages';
 
 export default function AnnouncementsScreen() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [user, loading]);
+  if (loading || !user) return null;
+
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('notices');
 

@@ -8,6 +8,7 @@ import { setupErrorLogging } from '../utils/errorLogger';
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 import { Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold } from '@expo-google-fonts/nunito';
 import '../utils/i18n';
+import { AuthProvider } from '../utils/AuthContext';
 
 const STORAGE_KEY = 'emulated_device';
 
@@ -62,21 +63,23 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={[commonStyles.wrapper, {
-          paddingTop: insetsToUse.top,
-          paddingBottom: insetsToUse.bottom,
-          paddingLeft: insetsToUse.left,
-          paddingRight: insetsToUse.right,
-       }]}>
-        <StatusBar style="dark" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            animation: 'default',
-          }}
-        />
-      </SafeAreaView>
-    </SafeAreaProvider>
+    <AuthProvider>
+      <SafeAreaProvider>
+        <SafeAreaView style={[commonStyles.wrapper, {
+            paddingTop: insetsToUse.top,
+            paddingBottom: insetsToUse.bottom,
+            paddingLeft: insetsToUse.left,
+            paddingRight: insetsToUse.right,
+         }]}>
+          <StatusBar style="dark" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              animation: 'default',
+            }}
+          />
+        </SafeAreaView>
+      </SafeAreaProvider>
+    </AuthProvider>
   );
 }
